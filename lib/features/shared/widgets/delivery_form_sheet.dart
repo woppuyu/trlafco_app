@@ -3,13 +3,20 @@ import 'package:intl/intl.dart';
 import 'package:trlafco_app/models/delivery.dart';
 import 'package:trlafco_app/state/app_state.dart';
 
+/// Bottom-sheet form for adding or editing a Delivery.
+///
+/// Pass [existingDelivery] to switch the form into edit mode.
 class DeliveryFormSheet extends StatefulWidget {
   const DeliveryFormSheet({
     super.key,
     required this.appState,
+    this.existingDelivery,
   });
 
   final AppState appState;
+
+  /// When non-null the form is in "edit" mode, pre-filled with this delivery.
+  final Delivery? existingDelivery;
 
   @override
   State<DeliveryFormSheet> createState() => _DeliveryFormSheetState();
@@ -20,7 +27,21 @@ class _DeliveryFormSheetState extends State<DeliveryFormSheet> {
   String? _selectedFarmerId;
   final _volumeController = TextEditingController();
   final _weightController = TextEditingController();
-  DateTime _selectedDate = DateTime.now();
+  late DateTime _selectedDate;
+
+  bool get _isEditing => widget.existingDelivery != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final existing = widget.existingDelivery;
+    _selectedFarmerId = existing?.farmerSupplierId;
+    _selectedDate = existing?.date ?? DateTime.now();
+    _volumeController.text =
+        existing != null ? existing.volumeLiters.toStringAsFixed(1) : '';
+    _weightController.text =
+        existing != null ? existing.weightKg.toStringAsFixed(1) : '';
+  }
 
   @override
   void dispose() {
@@ -46,18 +67,31 @@ class _DeliveryFormSheetState extends State<DeliveryFormSheet> {
       return;
     }
 
-    final now = DateTime.now().microsecondsSinceEpoch;
-    await widget.appState.addDelivery(
-      Delivery(
-        id: 'DL-$now',
+    final volume = double.parse(_volumeController.text.trim());
+    final weight = double.parse(_weightController.text.trim());
+
+    if (_isEditing) {
+      final updated = widget.existingDelivery!.copyWith(
         farmerSupplierId: _selectedFarmerId!,
         date: _selectedDate,
-        volumeLiters: double.parse(_volumeController.text.trim()),
-        weightKg: double.parse(_weightController.text.trim()),
-        classification: null,
-        status: 'pending',
-      ),
-    );
+        volumeLiters: volume,
+        weightKg: weight,
+      );
+      await widget.appState.updateDelivery(updated);
+    } else {
+      final now = DateTime.now().microsecondsSinceEpoch;
+      await widget.appState.addDelivery(
+        Delivery(
+          id: 'DL-$now',
+          farmerSupplierId: _selectedFarmerId!,
+          date: _selectedDate,
+          volumeLiters: volume,
+          weightKg: weight,
+          classification: null,
+          status: 'pending',
+        ),
+      );
+    }
 
     if (mounted) {
       Navigator.of(context).pop();
@@ -82,7 +116,7 @@ class _DeliveryFormSheetState extends State<DeliveryFormSheet> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Add Delivery',
+                  _isEditing ? 'Edit Delivery' : 'Add Delivery',
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 12),
@@ -100,7 +134,8 @@ class _DeliveryFormSheetState extends State<DeliveryFormSheet> {
                       .toList(),
                   validator: (value) =>
                       value == null ? 'Please choose a farmer-supplier' : null,
-                  onChanged: (value) => setState(() => _selectedFarmerId = value),
+                  onChanged: (value) =>
+                      setState(() => _selectedFarmerId = value),
                 ),
                 const SizedBox(height: 12),
                 InkWell(
@@ -118,8 +153,10 @@ class _DeliveryFormSheetState extends State<DeliveryFormSheet> {
                 TextFormField(
                   key: const Key('delivery_volume_field'),
                   controller: _volumeController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(labelText: 'Volume (Liters)'),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration:
+                      const InputDecoration(labelText: 'Volume (Liters)'),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
                       return 'Volume is required';
@@ -135,7 +172,8 @@ class _DeliveryFormSheetState extends State<DeliveryFormSheet> {
                 TextFormField(
                   key: const Key('delivery_weight_field'),
                   controller: _weightController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
                   decoration: const InputDecoration(labelText: 'Weight (kg)'),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
@@ -154,8 +192,9 @@ class _DeliveryFormSheetState extends State<DeliveryFormSheet> {
                   child: ElevatedButton.icon(
                     key: const Key('save_delivery_button'),
                     onPressed: _save,
-                    icon: const Icon(Icons.add_task),
-                    label: const Text('Save Delivery'),
+                    icon: Icon(_isEditing ? Icons.save : Icons.add_task),
+                    label: Text(
+                        _isEditing ? 'Save Changes' : 'Save Delivery'),
                   ),
                 ),
               ],

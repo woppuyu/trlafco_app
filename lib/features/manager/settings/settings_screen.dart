@@ -37,7 +37,7 @@ class SettingsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           ElevatedButton.icon(
-            onPressed: appState.logout,
+            onPressed: () async => appState.logout(),
             icon: const Icon(Icons.logout),
             label: const Text('Log Out'),
           ),

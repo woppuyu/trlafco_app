@@ -114,12 +114,18 @@ class SeedData {
 
   static List<Payment> payments() {
     return [
-      Payment(id: 'PAY-001', farmerSupplierId: 'FS-001', periodLabel: 'May 1-15, 2026', totalVolumeLiters: 1330, totalAmount: 59850, status: 'paid'),
-      Payment(id: 'PAY-002', farmerSupplierId: 'FS-002', periodLabel: 'May 1-15, 2026', totalVolumeLiters: 1165, totalAmount: 51945, status: 'pending'),
-      Payment(id: 'PAY-003', farmerSupplierId: 'FS-004', periodLabel: 'May 1-15, 2026', totalVolumeLiters: 1208, totalAmount: 54510, status: 'pending'),
-      Payment(id: 'PAY-004', farmerSupplierId: 'FS-005', periodLabel: 'May 16-31, 2026', totalVolumeLiters: 980, totalAmount: 44100, status: 'paid'),
-      Payment(id: 'PAY-005', farmerSupplierId: 'FS-006', periodLabel: 'May 16-31, 2026', totalVolumeLiters: 905, totalAmount: 40725, status: 'pending'),
-      Payment(id: 'PAY-006', farmerSupplierId: 'FS-007', periodLabel: 'May 16-31, 2026', totalVolumeLiters: 1124, totalAmount: 50580, status: 'pending'),
+      // July 2026 — current period (pending)
+      Payment(id: 'PAY-007', farmerSupplierId: 'FS-001', periodLabel: 'Jul 1–15, 2026', periodStart: DateTime(2026, 7, 1), totalVolumeLiters: 713, totalAmount: 32085, status: 'pending'),
+      Payment(id: 'PAY-008', farmerSupplierId: 'FS-002', periodLabel: 'Jul 1–15, 2026', periodStart: DateTime(2026, 7, 1), totalVolumeLiters: 553, totalAmount: 24885, status: 'pending'),
+      Payment(id: 'PAY-009', farmerSupplierId: 'FS-004', periodLabel: 'Jul 1–15, 2026', periodStart: DateTime(2026, 7, 1), totalVolumeLiters: 622, totalAmount: 27990, status: 'pending'),
+      Payment(id: 'PAY-010', farmerSupplierId: 'FS-007', periodLabel: 'Jul 1–15, 2026', periodStart: DateTime(2026, 7, 1), totalVolumeLiters: 510, totalAmount: 22950, status: 'paid'),
+      // May 2026 — historical records
+      Payment(id: 'PAY-001', farmerSupplierId: 'FS-001', periodLabel: 'May 1–15, 2026', periodStart: DateTime(2026, 5, 1), totalVolumeLiters: 1330, totalAmount: 59850, status: 'paid'),
+      Payment(id: 'PAY-002', farmerSupplierId: 'FS-002', periodLabel: 'May 1–15, 2026', periodStart: DateTime(2026, 5, 1), totalVolumeLiters: 1165, totalAmount: 51945, status: 'paid'),
+      Payment(id: 'PAY-003', farmerSupplierId: 'FS-004', periodLabel: 'May 1–15, 2026', periodStart: DateTime(2026, 5, 1), totalVolumeLiters: 1208, totalAmount: 54510, status: 'paid'),
+      Payment(id: 'PAY-004', farmerSupplierId: 'FS-005', periodLabel: 'May 16–31, 2026', periodStart: DateTime(2026, 5, 16), totalVolumeLiters: 980, totalAmount: 44100, status: 'paid'),
+      Payment(id: 'PAY-005', farmerSupplierId: 'FS-006', periodLabel: 'May 16–31, 2026', periodStart: DateTime(2026, 5, 16), totalVolumeLiters: 905, totalAmount: 40725, status: 'paid'),
+      Payment(id: 'PAY-006', farmerSupplierId: 'FS-007', periodLabel: 'May 16–31, 2026', periodStart: DateTime(2026, 5, 16), totalVolumeLiters: 1124, totalAmount: 50580, status: 'paid'),
     ];
   }
 }

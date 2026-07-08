@@ -2,13 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:trlafco_app/models/farmer_supplier.dart';
 import 'package:trlafco_app/state/app_state.dart';
 
+/// Bottom-sheet form for adding or editing a FarmerSupplier.
+///
+/// Pass [existingFarmer] to switch the form into edit mode.
 class FarmerFormSheet extends StatefulWidget {
   const FarmerFormSheet({
     super.key,
     required this.appState,
+    this.existingFarmer,
   });
 
   final AppState appState;
+
+  /// When non-null the form is in "edit" mode, pre-filled with this farmer.
+  final FarmerSupplier? existingFarmer;
 
   @override
   State<FarmerFormSheet> createState() => _FarmerFormSheetState();
@@ -16,10 +23,24 @@ class FarmerFormSheet extends StatefulWidget {
 
 class _FarmerFormSheetState extends State<FarmerFormSheet> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _barangayController = TextEditingController();
-  final _contactController = TextEditingController();
-  String _status = 'active';
+  late final TextEditingController _nameController;
+  late final TextEditingController _barangayController;
+  late final TextEditingController _contactController;
+  late String _status;
+
+  bool get _isEditing => widget.existingFarmer != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final existing = widget.existingFarmer;
+    _nameController = TextEditingController(text: existing?.name ?? '');
+    _barangayController =
+        TextEditingController(text: existing?.barangay ?? '');
+    _contactController =
+        TextEditingController(text: existing?.contactNumber ?? '');
+    _status = existing?.status ?? 'active';
+  }
 
   @override
   void dispose() {
@@ -34,16 +55,27 @@ class _FarmerFormSheetState extends State<FarmerFormSheet> {
       return;
     }
 
-    final now = DateTime.now().microsecondsSinceEpoch;
-    await widget.appState.addFarmerSupplier(
-      FarmerSupplier(
-        id: 'FS-$now',
+    if (_isEditing) {
+      final updated = FarmerSupplier(
+        id: widget.existingFarmer!.id,
         name: _nameController.text.trim(),
         barangay: _barangayController.text.trim(),
         contactNumber: _contactController.text.trim(),
         status: _status,
-      ),
-    );
+      );
+      await widget.appState.updateFarmerSupplier(updated);
+    } else {
+      final now = DateTime.now().microsecondsSinceEpoch;
+      await widget.appState.addFarmerSupplier(
+        FarmerSupplier(
+          id: 'FS-$now',
+          name: _nameController.text.trim(),
+          barangay: _barangayController.text.trim(),
+          contactNumber: _contactController.text.trim(),
+          status: _status,
+        ),
+      );
+    }
 
     if (mounted) {
       Navigator.of(context).pop();
@@ -67,7 +99,7 @@ class _FarmerFormSheetState extends State<FarmerFormSheet> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Add Farmer-Supplier',
+                _isEditing ? 'Edit Farmer-Supplier' : 'Add Farmer-Supplier',
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 12),
@@ -75,21 +107,25 @@ class _FarmerFormSheetState extends State<FarmerFormSheet> {
                 controller: _nameController,
                 decoration: const InputDecoration(labelText: 'Full Name'),
                 validator: (value) =>
-                    value == null || value.trim().isEmpty ? 'Name is required' : null,
+                    value == null || value.trim().isEmpty
+                        ? 'Name is required'
+                        : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _barangayController,
                 decoration: const InputDecoration(labelText: 'Barangay'),
-                validator: (value) => value == null || value.trim().isEmpty
-                    ? 'Barangay is required'
-                    : null,
+                validator: (value) =>
+                    value == null || value.trim().isEmpty
+                        ? 'Barangay is required'
+                        : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _contactController,
                 keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(labelText: 'Contact Number'),
+                decoration:
+                    const InputDecoration(labelText: 'Contact Number'),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
                     return 'Contact number is required';
@@ -106,17 +142,22 @@ class _FarmerFormSheetState extends State<FarmerFormSheet> {
                 decoration: const InputDecoration(labelText: 'Status'),
                 items: const [
                   DropdownMenuItem(value: 'active', child: Text('Active')),
-                  DropdownMenuItem(value: 'inactive', child: Text('Inactive')),
+                  DropdownMenuItem(
+                      value: 'inactive', child: Text('Inactive')),
                 ],
-                onChanged: (value) => setState(() => _status = value ?? 'active'),
+                onChanged: (value) =>
+                    setState(() => _status = value ?? 'active'),
               ),
               const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
+                  key: const Key('save_farmer_button'),
                   onPressed: _save,
-                  icon: const Icon(Icons.save),
-                  label: const Text('Save Farmer-Supplier'),
+                  icon: Icon(_isEditing ? Icons.save : Icons.person_add),
+                  label: Text(_isEditing
+                      ? 'Save Changes'
+                      : 'Save Farmer-Supplier'),
                 ),
               ),
             ],

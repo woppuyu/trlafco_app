@@ -15,8 +15,12 @@ class LocalStorageService {
   static const String _productsKey = 'products';
   static const String _inventoryKey = 'inventory';
   static const String _paymentsKey = 'payments';
+  static const String _sessionRoleKey = 'session_role';
+  static const String _sessionUsernameKey = 'session_username';
 
   Future<SharedPreferences> get _prefs async => SharedPreferences.getInstance();
+
+  // ─── Theme ───────────────────────────────────────────────────────────────
 
   Future<String?> loadThemeMode() async {
     final prefs = await _prefs;
@@ -27,6 +31,32 @@ class LocalStorageService {
     final prefs = await _prefs;
     await prefs.setString(_themeKey, mode);
   }
+
+  // ─── Session ─────────────────────────────────────────────────────────────
+
+  /// Persists the authenticated role and username so the session survives restarts.
+  Future<void> saveSession(String role, String username) async {
+    final prefs = await _prefs;
+    await prefs.setString(_sessionRoleKey, role);
+    await prefs.setString(_sessionUsernameKey, username);
+  }
+
+  /// Returns the saved (role, username) pair, or (null, null) if no session is stored.
+  Future<(String?, String?)> loadSession() async {
+    final prefs = await _prefs;
+    final role = prefs.getString(_sessionRoleKey);
+    final username = prefs.getString(_sessionUsernameKey);
+    return (role, username);
+  }
+
+  /// Removes the stored session (called on logout).
+  Future<void> clearSession() async {
+    final prefs = await _prefs;
+    await prefs.remove(_sessionRoleKey);
+    await prefs.remove(_sessionUsernameKey);
+  }
+
+  // ─── Domain data ─────────────────────────────────────────────────────────
 
   Future<List<FarmerSupplier>> loadFarmers() async {
     return _loadList(_farmersKey, FarmerSupplier.fromJson);
@@ -67,6 +97,8 @@ class LocalStorageService {
   Future<void> savePayments(List<Payment> payments) async {
     await _saveList(_paymentsKey, payments.map((e) => e.toJson()).toList());
   }
+
+  // ─── Private helpers ─────────────────────────────────────────────────────
 
   Future<List<T>> _loadList<T>(
     String key,

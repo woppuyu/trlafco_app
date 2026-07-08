@@ -41,20 +41,32 @@ class _FarmerSuppliersTab extends StatelessWidget {
 
     return RefreshIndicator(
       onRefresh: state.refreshData,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(12),
-        itemCount: state.farmers.length,
-        itemBuilder: (context, index) {
-          final farmer = state.farmers[index];
-          return Card(
-            child: ListTile(
-              onTap: () => context.push('/manager/records/farmer/${farmer.id}'),
-              title: Text(farmer.name),
-              subtitle: Text('${farmer.barangay} • ${farmer.contactNumber}'),
-              trailing: Chip(
-                label: Text(farmer.status),
-              ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isWide = constraints.maxWidth > 720;
+          final crossAxisCount = isWide ? 2 : 1;
+          return GridView.builder(
+            padding: const EdgeInsets.all(12),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 0,
+              childAspectRatio: isWide ? 3.8 : 5,
             ),
+            itemCount: state.farmers.length,
+            itemBuilder: (context, index) {
+              final farmer = state.farmers[index];
+              return Card(
+                child: ListTile(
+                  onTap: () =>
+                      context.push('/manager/records/farmer/${farmer.id}'),
+                  title: Text(farmer.name),
+                  subtitle:
+                      Text('${farmer.barangay} • ${farmer.contactNumber}'),
+                  trailing: Chip(label: Text(farmer.status)),
+                ),
+              );
+            },
           );
         },
       ),
@@ -129,47 +141,70 @@ class _PaymentsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(12),
-      itemCount: state.payments.length,
-      itemBuilder: (context, index) {
-        final payment = state.payments[index];
-        final farmer = state.farmerById(payment.farmerSupplierId);
-        return Card(
-          child: ListTile(
-            title: Text('${farmer?.name ?? 'Unknown'} • ${payment.periodLabel}'),
-            subtitle: Text(
-              '${payment.totalVolumeLiters.toStringAsFixed(0)} L • PHP ${payment.totalAmount.toStringAsFixed(2)}',
-            ),
-            trailing: payment.status == 'paid'
-                ? const Chip(label: Text('Paid'))
-                : TextButton(
-                    onPressed: () async {
-                      final confirm = await showDialog<bool>(
-                        context: context,
-                        builder: (_) => AlertDialog(
-                          title: const Text('Mark as Paid?'),
-                          content: const Text('Confirm payment release for this record.'),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, false),
-                              child: const Text('Cancel'),
-                            ),
-                            ElevatedButton(
-                              onPressed: () => Navigator.pop(context, true),
-                              child: const Text('Confirm'),
-                            ),
-                          ],
-                        ),
-                      );
-
-                      if (confirm == true) {
-                        await state.markPaymentPaid(payment.id);
-                      }
-                    },
-                    child: const Text('Mark Paid'),
-                  ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth > 720;
+        final crossAxisCount = isWide ? 2 : 1;
+        return GridView.builder(
+          padding: const EdgeInsets.all(12),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 0,
+            childAspectRatio: isWide ? 3.2 : 4.5,
           ),
+          itemCount: state.payments.length,
+          itemBuilder: (context, index) {
+            final payment = state.payments[index];
+            final farmer = state.farmerById(payment.farmerSupplierId);
+            return Card(
+              child: ListTile(
+                title: Text(
+                    '${farmer?.name ?? 'Unknown'} • ${payment.periodLabel}'),
+                subtitle: Text(
+                  '${payment.totalVolumeLiters.toStringAsFixed(0)} L • PHP ${payment.totalAmount.toStringAsFixed(2)}',
+                ),
+                trailing: payment.status == 'paid'
+                    ? const Chip(label: Text('Paid'))
+                    : TextButton(
+                        onPressed: () async {
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (_) => AlertDialog(
+                              title: const Text('Mark as Paid?'),
+                              content: const Text(
+                                  'Confirm payment release for this record.'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () =>
+                                      Navigator.pop(context, false),
+                                  child: const Text('Cancel'),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () =>
+                                      Navigator.pop(context, true),
+                                  child: const Text('Confirm'),
+                                ),
+                              ],
+                            ),
+                          );
+                          if (confirm == true && context.mounted) {
+                            await state.markPaymentPaid(payment.id);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Payment marked as paid'),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                        child: const Text('Mark Paid'),
+                      ),
+              ),
+            );
+          },
         );
       },
     );

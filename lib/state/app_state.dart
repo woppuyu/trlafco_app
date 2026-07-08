@@ -26,6 +26,8 @@ class AppState extends ChangeNotifier {
   List<FinishedProductInventory> inventory = [];
   List<Payment> payments = [];
 
+  // ─── Initialization ───────────────────────────────────────────────────────
+
   Future<void> initialize() async {
     isLoading = true;
     notifyListeners();
@@ -33,6 +35,16 @@ class AppState extends ChangeNotifier {
     final savedTheme = await storage.loadThemeMode();
     if (savedTheme == 'dark') {
       themeMode = ThemeMode.dark;
+    }
+
+    // Restore persisted session so user stays logged in after restart.
+    final (savedRole, savedUsername) = await storage.loadSession();
+    if (savedRole == 'manager') {
+      currentRole = UserRole.manager;
+      currentUsername = savedUsername;
+    } else if (savedRole == 'logistics') {
+      currentRole = UserRole.logistics;
+      currentUsername = savedUsername;
     }
 
     farmers = await storage.loadFarmers();
@@ -58,6 +70,8 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ─── Auth ─────────────────────────────────────────────────────────────────
+
   Future<bool> login({
     required String username,
     required String password,
@@ -71,6 +85,7 @@ class AppState extends ChangeNotifier {
       currentRole = UserRole.manager;
       currentUsername = username;
       authError = null;
+      await storage.saveSession('manager', username);
       notifyListeners();
       return true;
     }
@@ -79,6 +94,7 @@ class AppState extends ChangeNotifier {
       currentRole = UserRole.logistics;
       currentUsername = username;
       authError = null;
+      await storage.saveSession('logistics', username);
       notifyListeners();
       return true;
     }
@@ -88,12 +104,15 @@ class AppState extends ChangeNotifier {
     return false;
   }
 
-  void logout() {
+  Future<void> logout() async {
     currentRole = null;
     currentUsername = null;
     authError = null;
+    await storage.clearSession();
     notifyListeners();
   }
+
+  // ─── Theme ────────────────────────────────────────────────────────────────
 
   Future<void> setThemeMode(ThemeMode mode) async {
     themeMode = mode;
@@ -106,6 +125,8 @@ class AppState extends ChangeNotifier {
       themeMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark,
     );
   }
+
+  // ─── Lookups ──────────────────────────────────────────────────────────────
 
   FarmerSupplier? farmerById(String id) {
     for (final farmer in farmers) {
@@ -121,14 +142,43 @@ class AppState extends ChangeNotifier {
     return null;
   }
 
+  // ─── Farmer-Supplier CRUD ─────────────────────────────────────────────────
+
   Future<void> addFarmerSupplier(FarmerSupplier farmer) async {
     farmers = [farmer, ...farmers];
     await storage.saveFarmers(farmers);
     notifyListeners();
   }
 
+  Future<void> updateFarmerSupplier(FarmerSupplier updated) async {
+    farmers = farmers.map((f) => f.id == updated.id ? updated : f).toList();
+    await storage.saveFarmers(farmers);
+    notifyListeners();
+  }
+
+  Future<void> deleteFarmerSupplier(String id) async {
+    farmers = farmers.where((f) => f.id != id).toList();
+    await storage.saveFarmers(farmers);
+    notifyListeners();
+  }
+
+  // ─── Delivery CRUD ────────────────────────────────────────────────────────
+
   Future<void> addDelivery(Delivery delivery) async {
     deliveries = [delivery, ...deliveries];
+    await storage.saveDeliveries(deliveries);
+    notifyListeners();
+  }
+
+  Future<void> updateDelivery(Delivery updated) async {
+    deliveries =
+        deliveries.map((d) => d.id == updated.id ? updated : d).toList();
+    await storage.saveDeliveries(deliveries);
+    notifyListeners();
+  }
+
+  Future<void> deleteDelivery(String id) async {
+    deliveries = deliveries.where((d) => d.id != id).toList();
     await storage.saveDeliveries(deliveries);
     notifyListeners();
   }
@@ -151,6 +201,8 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ─── Payment operations ───────────────────────────────────────────────────
+
   Future<void> markPaymentPaid(String paymentId) async {
     payments = payments.map((payment) {
       if (payment.id == paymentId) {
@@ -163,10 +215,14 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ─── Refresh ──────────────────────────────────────────────────────────────
+
   Future<void> refreshData() async {
     await Future<void>.delayed(const Duration(milliseconds: 700));
     notifyListeners();
   }
+
+  // ─── Computed metrics ─────────────────────────────────────────────────────
 
   List<Delivery> get pendingDeliveries {
     return deliveries.where((e) => e.status == 'pending').toList();
@@ -174,14 +230,20 @@ class AppState extends ChangeNotifier {
 
   double get totalRawMilkStock {
     return deliveries
-        .where((e) => e.classification == 'Class A' || e.classification == 'Class B')
+        .where((e) =>
+            e.classification == 'Class A' || e.classification == 'Class B')
         .fold(0, (sum, e) => sum + e.volumeLiters);
   }
 
+  /// Total payout amount for the current calendar month only.
   double get thisMonthPayoutTotal {
     final now = DateTime.now();
     return payments
-        .where((e) => e.periodLabel.contains('2026') || now.year.toString().isNotEmpty)
+        .where(
+          (e) =>
+              e.periodStart.year == now.year &&
+              e.periodStart.month == now.month,
+        )
         .fold(0, (sum, e) => sum + e.totalAmount);
   }
 
@@ -198,6 +260,8 @@ class AppState extends ChangeNotifier {
             e.date.day == now.day)
         .length;
   }
+
+  // ─── Private helpers ──────────────────────────────────────────────────────
 
   Future<void> _persistData() async {
     await Future.wait([
