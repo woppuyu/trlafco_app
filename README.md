@@ -1,17 +1,20 @@
-# trlafco_app
+# TRLAFCO App 🥛
 
-A new Flutter project.
+A Flutter-based logistics and management application for TRLAFCO dairy operations.
 
-## Getting Started
+---
 
-This project is a starting point for a Flutter application.
+### 📥 Download & Test the App
+If you are testing the app, you can download the latest installable APKs directly from the releases page:
 
-A few resources to get you started if this is your first Flutter project:
+👉 **[Download Latest Test Build (APKs) Here](https://github.com/woppuyu/trlafco_app/releases)**
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+*Most modern Android phones should use the **`trlafco_app-arm64-v8a-release.apk`** file.*
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+---
+
+## Features
+- **Logistics Dashboard:** View daily deliveries, pending classifications, and log new milk shipments.
+- **Manager Dashboard:** Tracks overall analytics, milk volume charts, and displays financial payouts.
+- **Quick Login:** Built-in dev options to easily switch roles for testing without typing credentials.
+
