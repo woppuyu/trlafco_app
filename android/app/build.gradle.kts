@@ -32,6 +32,14 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+
+    applicationVariants.all {
+        outputs.all {
+            val outputImpl = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
+            val originalName = outputImpl.outputFileName
+            outputImpl.outputFileName = originalName.replace("app-", "trlafco_app-")
+        }
+    }
 }
 
 kotlin {
