@@ -94,7 +94,7 @@ class _DeliveryFormSheetState extends State<DeliveryFormSheet> {
     }
 
     if (mounted) {
-      Navigator.of(context).pop();
+      Navigator.of(context).pop(true);
     }
   }
 

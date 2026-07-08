@@ -37,12 +37,17 @@ class LogisticsShellScreen extends StatelessWidget {
           NavigationDestination(
             icon: Icon(Icons.assignment_turned_in_outlined),
             selectedIcon: Icon(Icons.assignment_turned_in),
-            label: 'Classification',
+            label: 'Classify',
           ),
           NavigationDestination(
             icon: Icon(Icons.people_outline),
             selectedIcon: Icon(Icons.people),
-            label: 'Farmer-Suppliers',
+            label: 'Farmers',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.settings_outlined),
+            selectedIcon: Icon(Icons.settings),
+            label: 'Settings',
           ),
         ],
       ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:trlafco_app/models/farmer_supplier.dart';
@@ -13,13 +14,7 @@ class ManagerRecordsScreen extends StatelessWidget {
     return const DefaultTabController(
       length: 3,
       child: Scaffold(
-        appBar: TabBar(
-          tabs: [
-            Tab(text: 'Farmer-Suppliers'),
-            Tab(text: 'Inventory'),
-            Tab(text: 'Payments'),
-          ],
-        ),
+        appBar: _RecordsAppBar(),
         body: TabBarView(
           children: [
             _FarmerSuppliersTab(),
@@ -27,6 +22,42 @@ class ManagerRecordsScreen extends StatelessWidget {
             _PaymentsTab(),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ─── App bar with title + tab bar ─────────────────────────────────────────────
+
+class _RecordsAppBar extends StatelessWidget implements PreferredSizeWidget {
+  const _RecordsAppBar();
+
+  @override
+  Size get preferredSize =>
+      const Size.fromHeight(kToolbarHeight + kTextTabBarHeight);
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return AppBar(
+      title: Text('Records',
+          style: Theme.of(context).appBarTheme.titleTextStyle),
+      bottom: TabBar(
+        labelStyle:
+            GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600),
+        unselectedLabelStyle:
+            GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w400),
+        labelColor: scheme.primary,
+        unselectedLabelColor:
+            scheme.onSurface.withValues(alpha: 0.5),
+        indicatorColor: scheme.primary,
+        indicatorWeight: 2,
+        dividerColor: scheme.outlineVariant.withValues(alpha: 0.5),
+        tabs: const [
+          Tab(text: 'Farmers'),
+          Tab(text: 'Inventory'),
+          Tab(text: 'Payments'),
+        ],
       ),
     );
   }
@@ -50,8 +81,8 @@ class _FarmerSuppliersTab extends StatelessWidget {
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: crossAxisCount,
               crossAxisSpacing: 8,
-              mainAxisSpacing: 0,
-              childAspectRatio: isWide ? 3.8 : 5,
+              mainAxisSpacing: 8,
+              childAspectRatio: isWide ? 3.2 : 4.0,
             ),
             itemCount: state.farmers.length,
             itemBuilder: (context, index) {
@@ -150,8 +181,8 @@ class _PaymentsTab extends StatelessWidget {
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
             crossAxisSpacing: 8,
-            mainAxisSpacing: 0,
-            childAspectRatio: isWide ? 3.2 : 4.5,
+            mainAxisSpacing: 8,
+            childAspectRatio: isWide ? 2.8 : 3.0,
           ),
           itemCount: state.payments.length,
           itemBuilder: (context, index) {
@@ -159,6 +190,17 @@ class _PaymentsTab extends StatelessWidget {
             final farmer = state.farmerById(payment.farmerSupplierId);
             return Card(
               child: ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: payment.status == 'paid'
+                      ? Colors.green.withValues(alpha: 0.1)
+                      : Colors.orange.withValues(alpha: 0.1),
+                  child: Icon(
+                    payment.status == 'paid'
+                        ? Icons.check_circle_rounded
+                        : Icons.pending_rounded,
+                    color: payment.status == 'paid' ? Colors.green : Colors.orange,
+                  ),
+                ),
                 title: Text(
                     '${farmer?.name ?? 'Unknown'} • ${payment.periodLabel}'),
                 subtitle: Text(
@@ -170,19 +212,19 @@ class _PaymentsTab extends StatelessWidget {
                         onPressed: () async {
                           final confirm = await showDialog<bool>(
                             context: context,
-                            builder: (_) => AlertDialog(
+                            builder: (dialogContext) => AlertDialog(
                               title: const Text('Mark as Paid?'),
                               content: const Text(
                                   'Confirm payment release for this record.'),
                               actions: [
                                 TextButton(
                                   onPressed: () =>
-                                      Navigator.pop(context, false),
+                                      Navigator.pop(dialogContext, false),
                                   child: const Text('Cancel'),
                                 ),
                                 ElevatedButton(
                                   onPressed: () =>
-                                      Navigator.pop(context, true),
+                                      Navigator.pop(dialogContext, true),
                                   child: const Text('Confirm'),
                                 ),
                               ],
@@ -232,47 +274,155 @@ class FarmerSupplierDetailScreen extends StatelessWidget {
 
     final relatedDeliveries = state.deliveries
         .where((d) => d.farmerSupplierId == farmer.id)
-        .toList();
+        .toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
+
+    final scheme = Theme.of(context).colorScheme;
+    final isActive = farmer.status == 'active';
+    final statusColor =
+        isActive ? const Color(0xFF16A34A) : const Color(0xFF6B7280);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Farmer-Supplier Detail')),
+      appBar: AppBar(title: Text(farmer.name)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    farmer.name,
-                    style: Theme.of(context).textTheme.titleLarge,
+          // Profile card
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardTheme.color,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: scheme.outlineVariant.withValues(alpha: 0.5),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: scheme.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(14),
                   ),
-                  const SizedBox(height: 8),
-                  Text('Barangay: ${farmer.barangay}'),
-                  Text('Contact: ${farmer.contactNumber}'),
-                  Text('Status: ${farmer.status}'),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Recent Deliveries',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
-          ...relatedDeliveries.take(8).map(
-            (d) => Card(
-              child: ListTile(
-                title: Text(DateFormat('MMM d, y').format(d.date)),
-                subtitle: Text(
-                  '${d.volumeLiters.toStringAsFixed(0)} L • ${d.classification ?? 'Pending'}',
+                  child: Icon(Icons.agriculture_rounded,
+                      size: 26, color: scheme.primary),
                 ),
-              ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(farmer.name,
+                          style: Theme.of(context).textTheme.titleLarge),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${farmer.barangay}  ·  ${farmer.contactNumber}',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                        color: statusColor.withValues(alpha: 0.3)),
+                  ),
+                  child: Text(
+                    farmer.status,
+                    style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: statusColor),
+                  ),
+                ),
+              ],
             ),
           ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Text('Recent Deliveries',
+                  style: Theme.of(context).textTheme.titleMedium),
+              const Spacer(),
+              Text(
+                '${relatedDeliveries.length} total',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (relatedDeliveries.isEmpty)
+            Center(
+                child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text('No deliveries yet.',
+                  style: Theme.of(context).textTheme.bodySmall),
+            ))
+          else
+            ...relatedDeliveries.take(8).map(
+              (d) {
+                final classColor = d.classification == 'Class A'
+                    ? const Color(0xFF16A34A)
+                    : d.classification == 'Class B'
+                        ? const Color(0xFFD97706)
+                        : d.classification == 'Rejected'
+                            ? const Color(0xFFDC2626)
+                            : const Color(0xFF6B7280);
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).cardTheme.color,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: scheme.outlineVariant.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.local_shipping_outlined,
+                          size: 16,
+                          color: scheme.onSurface.withValues(alpha: 0.4)),
+                      const SizedBox(width: 10),
+                      Text(
+                        DateFormat('MMM d, y').format(d.date),
+                        style: GoogleFonts.inter(
+                            fontSize: 13, fontWeight: FontWeight.w500),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${d.volumeLiters.toStringAsFixed(0)} L',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: classColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          d.classification ?? 'Pending',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: classColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
         ],
       ),
     );

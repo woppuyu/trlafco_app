@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -16,24 +17,43 @@ class DeliveriesScreen extends StatefulWidget {
 
 class _DeliveriesScreenState extends State<DeliveriesScreen> {
   String _filter = 'all';
+  bool _isFabVisible = true;
 
   // ─── Helpers ───────────────────────────────────────────────────────────────
 
   void _openAddSheet(AppState state) {
-    showModalBottomSheet<void>(
+    showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       builder: (_) => DeliveryFormSheet(appState: state),
-    );
+    ).then((result) {
+      if (result == true && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Delivery logged successfully'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    });
   }
 
   void _openEditSheet(AppState state, Delivery delivery) {
-    showModalBottomSheet<void>(
+    showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       builder: (_) =>
           DeliveryFormSheet(appState: state, existingDelivery: delivery),
-    );
+    ).then((result) {
+      if (result == true && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Delivery updated successfully'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    });
   }
 
   Future<void> _confirmDelete(AppState state, Delivery delivery) async {
@@ -41,7 +61,7 @@ class _DeliveriesScreenState extends State<DeliveriesScreen> {
     if (!mounted) return;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Delete Delivery?'),
         content: Text(
           'Delete the delivery record from ${farmer?.name ?? 'Unknown'} '
@@ -50,7 +70,7 @@ class _DeliveriesScreenState extends State<DeliveriesScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
@@ -58,7 +78,7 @@ class _DeliveriesScreenState extends State<DeliveriesScreen> {
               backgroundColor: Theme.of(context).colorScheme.error,
               foregroundColor: Theme.of(context).colorScheme.onError,
             ),
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Delete'),
           ),
         ],
@@ -78,13 +98,15 @@ class _DeliveriesScreenState extends State<DeliveriesScreen> {
   }
 
   Future<bool> _swipeClassifyWithConfirm(
-      AppState state, Delivery delivery) async {
+    AppState state,
+    Delivery delivery,
+  ) async {
     if (delivery.status != 'pending') return false;
 
     final farmer = state.farmerById(delivery.farmerSupplierId);
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Classify as Class B?'),
         content: Text(
           'Mark the delivery from ${farmer?.name ?? 'Unknown'} '
@@ -93,11 +115,11 @@ class _DeliveriesScreenState extends State<DeliveriesScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Classify as Class B'),
           ),
         ],
@@ -131,8 +153,7 @@ class _DeliveriesScreenState extends State<DeliveriesScreen> {
       if (_filter == 'pending') return delivery.status == 'pending';
       if (_filter == 'classified') return delivery.status == 'classified';
       return true;
-    }).toList()
-      ..sort((a, b) => b.date.compareTo(a.date));
+    }).toList()..sort((a, b) => b.date.compareTo(a.date));
 
     return Scaffold(
       appBar: AppBar(
@@ -147,7 +168,9 @@ class _DeliveriesScreenState extends State<DeliveriesScreen> {
                 DropdownMenuItem(value: 'all', child: Text('All')),
                 DropdownMenuItem(value: 'pending', child: Text('Pending')),
                 DropdownMenuItem(
-                    value: 'classified', child: Text('Classified')),
+                  value: 'classified',
+                  child: Text('Classified'),
+                ),
               ],
               onChanged: (value) {
                 setState(() => _filter = value ?? 'all');
@@ -156,8 +179,17 @@ class _DeliveriesScreenState extends State<DeliveriesScreen> {
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: state.refreshData,
+      body: NotificationListener<UserScrollNotification>(
+        onNotification: (notification) {
+          if (notification.direction == ScrollDirection.reverse) {
+            if (_isFabVisible) setState(() => _isFabVisible = false);
+          } else if (notification.direction == ScrollDirection.forward) {
+            if (!_isFabVisible) setState(() => _isFabVisible = true);
+          }
+          return false;
+        },
+        child: RefreshIndicator(
+          onRefresh: state.refreshData,
         child: LayoutBuilder(
           builder: (context, constraints) {
             final isWide = constraints.maxWidth > 720;
@@ -168,8 +200,9 @@ class _DeliveriesScreenState extends State<DeliveriesScreen> {
                     itemCount: deliveries.length,
                     itemBuilder: (context, index) {
                       final delivery = deliveries[index];
-                      final farmer =
-                          state.farmerById(delivery.farmerSupplierId);
+                      final farmer = state.farmerById(
+                        delivery.farmerSupplierId,
+                      );
 
                       return Dismissible(
                         key: Key(delivery.id),
@@ -183,8 +216,10 @@ class _DeliveriesScreenState extends State<DeliveriesScreen> {
                             color: Colors.green.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(16),
                           ),
-                          child: const Icon(Icons.done_all,
-                              color: Colors.green),
+                          child: const Icon(
+                            Icons.done_all,
+                            color: Colors.green,
+                          ),
                         ),
                         confirmDismiss: (direction) =>
                             _swipeClassifyWithConfirm(state, delivery),
@@ -192,7 +227,8 @@ class _DeliveriesScreenState extends State<DeliveriesScreen> {
                           delivery: delivery,
                           farmer: farmer,
                           onTap: () => context.push(
-                              '/logistics/deliveries/${delivery.id}'),
+                            '/logistics/deliveries/${delivery.id}',
+                          ),
                           trailing: PopupMenuButton<String>(
                             icon: const Icon(Icons.more_vert, size: 20),
                             onSelected: (action) {
@@ -217,12 +253,16 @@ class _DeliveriesScreenState extends State<DeliveriesScreen> {
                                 value: 'delete',
                                 child: Row(
                                   children: [
-                                    Icon(Icons.delete_outline,
-                                        size: 18, color: Colors.red),
+                                    Icon(
+                                      Icons.delete_outline,
+                                      size: 18,
+                                      color: Colors.red,
+                                    ),
                                     SizedBox(width: 8),
-                                    Text('Delete',
-                                        style:
-                                            TextStyle(color: Colors.red)),
+                                    Text(
+                                      'Delete',
+                                      style: TextStyle(color: Colors.red),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -255,13 +295,12 @@ class _DeliveriesScreenState extends State<DeliveriesScreen> {
                             ('classified', 'Classified'),
                           ].map(
                             (pair) => Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 2),
+                              padding: const EdgeInsets.symmetric(vertical: 2),
                               child: ChoiceChip(
                                 label: Text(pair.$2),
                                 selected: _filter == pair.$1,
-                                onSelected: (_) => setState(
-                                    () => _filter = pair.$1),
+                                onSelected: (_) =>
+                                    setState(() => _filter = pair.$1),
                               ),
                             ),
                           ),
@@ -278,20 +317,26 @@ class _DeliveriesScreenState extends State<DeliveriesScreen> {
           },
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openAddSheet(state),
-        icon: const Icon(Icons.add),
-        label: const Text('Add Delivery'),
+      ),
+      floatingActionButton: AnimatedSlide(
+        duration: const Duration(milliseconds: 300),
+        offset: _isFabVisible ? Offset.zero : const Offset(0, 2),
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 300),
+          opacity: _isFabVisible ? 1 : 0,
+          child: FloatingActionButton.extended(
+            onPressed: () => _openAddSheet(state),
+            icon: const Icon(Icons.add),
+            label: const Text('Add Delivery'),
+          ),
+        ),
       ),
     );
   }
 }
 
 class DeliveryDetailScreen extends StatelessWidget {
-  const DeliveryDetailScreen({
-    super.key,
-    required this.deliveryId,
-  });
+  const DeliveryDetailScreen({super.key, required this.deliveryId});
 
   final String deliveryId;
 
@@ -301,9 +346,7 @@ class DeliveryDetailScreen extends StatelessWidget {
     final delivery = state.deliveryById(deliveryId);
 
     if (delivery == null) {
-      return const Scaffold(
-        body: Center(child: Text('Delivery not found.')),
-      );
+      return const Scaffold(body: Center(child: Text('Delivery not found.')));
     }
 
     final farmer = state.farmerById(delivery.farmerSupplierId);
@@ -324,15 +367,13 @@ class DeliveryDetailScreen extends StatelessWidget {
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: 10),
-                  Text(
-                      'Date: ${DateFormat('MMM d, y').format(delivery.date)}'),
-                  Text(
-                      'Volume: ${delivery.volumeLiters.toStringAsFixed(1)} L'),
-                  Text(
-                      'Weight: ${delivery.weightKg.toStringAsFixed(1)} kg'),
+                  Text('Date: ${DateFormat('MMM d, y').format(delivery.date)}'),
+                  Text('Volume: ${delivery.volumeLiters.toStringAsFixed(1)} L'),
+                  Text('Weight: ${delivery.weightKg.toStringAsFixed(1)} kg'),
                   Text('Status: ${delivery.status}'),
                   Text(
-                      'Classification: ${delivery.classification ?? 'Pending'}'),
+                    'Classification: ${delivery.classification ?? 'Pending'}',
+                  ),
                 ],
               ),
             ),

@@ -184,6 +184,17 @@ GoRouter createRouter(AppState appState) {
               ),
             ],
           ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/logistics/settings',
+                pageBuilder: (context, state) => _slidePage(
+                  key: state.pageKey,
+                  child: const SettingsScreen(),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     ],

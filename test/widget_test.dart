@@ -13,6 +13,8 @@ import 'package:trlafco_app/models/payment.dart';
 import 'package:trlafco_app/services/local_storage_service.dart';
 import 'package:trlafco_app/state/app_state.dart';
 
+import 'package:trlafco_app/models/user_role.dart';
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 AppState _makeState({List<FarmerSupplier>? farmers, List<Delivery>? deliveries}) {
@@ -57,6 +59,11 @@ void main() {
         child: const MaterialApp(home: LoginScreen()),
       ),
     );
+    await tester.pumpAndSettle();
+
+    // Select the 'Credentials' tab first
+    await tester.tap(find.text('Credentials'));
+    await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('login_button')));
     await tester.pumpAndSettle();
@@ -74,6 +81,11 @@ void main() {
         child: const MaterialApp(home: LoginScreen()),
       ),
     );
+    await tester.pumpAndSettle();
+
+    // Select the 'Credentials' tab first
+    await tester.tap(find.text('Credentials'));
+    await tester.pumpAndSettle();
 
     await tester.enterText(find.byKey(const Key('username_field')), 'wrong');
     await tester.enterText(find.byKey(const Key('password_field')), 'wrong');
@@ -89,6 +101,37 @@ void main() {
       find.text('Invalid username or password. Please try again.'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('Quick Login tab allows logging in by tapping a role card', (tester) async {
+    final appState = AppState(storage: LocalStorageService());
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: appState,
+        child: const MaterialApp(home: LoginScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Verify 'Quick Login' button is present
+    final loginButtonFinder = find.byKey(const Key('quick_login_button'));
+    expect(loginButtonFinder, findsOneWidget);
+
+    // Tap the 'Manager' role card.
+    await tester.tap(find.text('Manager'));
+    await tester.pumpAndSettle();
+
+    // Tap the 'Sign In' quick login button.
+    await tester.tap(loginButtonFinder);
+    await tester.pump(); // start loading
+
+    // Wait for the 900ms simulated delay.
+    await tester.pump(const Duration(milliseconds: 1000));
+    await tester.pumpAndSettle();
+
+    // Verify it logged in as manager
+    expect(appState.currentRole, UserRole.manager);
   });
 
   // ── Delivery form ────────────────────────────────────────────────────────

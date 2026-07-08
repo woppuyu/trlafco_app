@@ -78,7 +78,7 @@ class _FarmerFormSheetState extends State<FarmerFormSheet> {
     }
 
     if (mounted) {
-      Navigator.of(context).pop();
+      Navigator.of(context).pop(true);
     }
   }
 
