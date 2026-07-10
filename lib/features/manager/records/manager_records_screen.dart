@@ -7,13 +7,16 @@ import 'package:trlafco_app/models/farmer_supplier.dart';
 import 'package:trlafco_app/state/app_state.dart';
 
 class ManagerRecordsScreen extends StatelessWidget {
-  const ManagerRecordsScreen({super.key});
+  const ManagerRecordsScreen({super.key, this.initialIndex = 0});
+
+  final int? initialIndex;
 
   @override
   Widget build(BuildContext context) {
-    return const DefaultTabController(
+    return DefaultTabController(
       length: 3,
-      child: Scaffold(
+      initialIndex: initialIndex ?? 0,
+      child: const Scaffold(
         appBar: _RecordsAppBar(),
         body: TabBarView(
           children: [
@@ -94,7 +97,27 @@ class _FarmerSuppliersTab extends StatelessWidget {
                   title: Text(farmer.name),
                   subtitle:
                       Text('${farmer.barangay} • ${farmer.contactNumber}'),
-                  trailing: Chip(label: Text(farmer.status)),
+                  trailing: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: (farmer.status == 'active'
+                              ? const Color(0xFF16A34A)
+                              : const Color(0xFF6B7280))
+                          .withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      farmer.status,
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: farmer.status == 'active'
+                            ? const Color(0xFF16A34A)
+                            : const Color(0xFF6B7280),
+                      ),
+                    ),
+                  ),
                 ),
               );
             },
@@ -130,10 +153,47 @@ class _InventoryTab extends StatelessWidget {
                   children: [
                     Card(
                       child: ListTile(
-                        title: const Text('Class A + B Milk Total'),
-                        subtitle: Text(
-                          '${state.totalRawMilkStock.toStringAsFixed(0)} liters currently available',
+                        leading: CircleAvatar(
+                          backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                          child: Icon(Icons.warehouse_rounded, color: Theme.of(context).colorScheme.primary),
                         ),
+                        title: Text(
+                          '${state.totalRawMilkStock.toStringAsFixed(0)} L',
+                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                        subtitle: const Text('Total Raw Milk Stock'),
+                      ),
+                    ),
+                    Card(
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: const Color(0xFF16A34A).withValues(alpha: 0.1),
+                          child: const Icon(Icons.verified_rounded, color: Color(0xFF16A34A)),
+                        ),
+                        title: Text(
+                          '${state.classARawMilkStock.toStringAsFixed(0)} L',
+                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                        subtitle: const Text('Class A Milk Total'),
+                      ),
+                    ),
+                    Card(
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: Colors.orange.withValues(alpha: 0.1),
+                          child: const Icon(Icons.pending_actions_rounded, color: Colors.orange),
+                        ),
+                        title: Text(
+                          '${state.classBRawMilkStock.toStringAsFixed(0)} L',
+                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                        subtitle: const Text('Class B Milk Total'),
                       ),
                     ),
                   ],
@@ -207,7 +267,22 @@ class _PaymentsTab extends StatelessWidget {
                   '${payment.totalVolumeLiters.toStringAsFixed(0)} L • PHP ${payment.totalAmount.toStringAsFixed(2)}',
                 ),
                 trailing: payment.status == 'paid'
-                    ? const Chip(label: Text('Paid'))
+                    ? Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF16A34A).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          'Paid',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF16A34A),
+                          ),
+                        ),
+                      )
                     : TextButton(
                         onPressed: () async {
                           final confirm = await showDialog<bool>(

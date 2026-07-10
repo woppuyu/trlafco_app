@@ -88,10 +88,14 @@ GoRouter createRouter(AppState appState) {
             routes: [
               GoRoute(
                 path: '/manager/records',
-                pageBuilder: (context, state) => _slidePage(
-                  key: state.pageKey,
-                  child: const ManagerRecordsScreen(),
-                ),
+                pageBuilder: (context, state) {
+                  final tabVal = state.uri.queryParameters['tab'];
+                  final initialIndex = int.tryParse(tabVal ?? '') ?? 0;
+                  return _slidePage(
+                    key: state.pageKey,
+                    child: ManagerRecordsScreen(initialIndex: initialIndex),
+                  );
+                },
                 routes: [
                   GoRoute(
                     path: 'farmer/:id',
@@ -151,14 +155,6 @@ GoRouter createRouter(AppState appState) {
                   key: state.pageKey,
                   child: const DeliveriesScreen(),
                 ),
-                routes: [
-                  GoRoute(
-                    path: ':id',
-                    builder: (context, state) => DeliveryDetailScreen(
-                      deliveryId: state.pathParameters['id']!,
-                    ),
-                  ),
-                ],
               ),
             ],
           ),

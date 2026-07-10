@@ -33,6 +33,8 @@ class ManagerAnalyticsScreen extends StatelessWidget {
               height: 200,
               child: LineChart(
                 LineChartData(
+                  minY: 1200,
+                  maxY: 1600,
                   borderData: FlBorderData(show: false),
                   gridData: FlGridData(
                     show: true,
@@ -78,8 +80,9 @@ class ManagerAnalyticsScreen extends StatelessWidget {
                           if (value % 10 != 0) {
                             return const SizedBox.shrink();
                           }
-                          return Padding(
-                            padding: const EdgeInsets.only(top: 6),
+                          return SideTitleWidget(
+                            meta: meta,
+                            space: 6,
                             child: Text(
                               'Day ${value.toInt()}',
                               style: Theme.of(context).textTheme.labelSmall,
@@ -91,11 +94,15 @@ class ManagerAnalyticsScreen extends StatelessWidget {
                     leftTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
-                        reservedSize: 42,
+                        reservedSize: 40,
                         interval: 100,
-                        getTitlesWidget: (value, meta) => Text(
-                          '${(value / 1000).toStringAsFixed(1)}k',
-                          style: Theme.of(context).textTheme.labelSmall,
+                        getTitlesWidget: (value, meta) => SideTitleWidget(
+                          meta: meta,
+                          space: 8,
+                          child: Text(
+                            '${(value / 1000).toStringAsFixed(1)}k',
+                            style: Theme.of(context).textTheme.labelSmall,
+                          ),
                         ),
                       ),
                     ),

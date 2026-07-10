@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:trlafco_app/features/shared/widgets/delivery_form_sheet.dart';
@@ -144,6 +143,173 @@ class _DeliveriesScreenState extends State<DeliveriesScreen> {
     return false;
   }
 
+  void _openDetailSheet(AppState state, Delivery delivery) {
+    final farmer = state.farmerById(delivery.farmerSupplierId);
+    final scheme = Theme.of(context).colorScheme;
+
+    final statusCapitalized = delivery.status.isEmpty
+        ? ''
+        : '${delivery.status[0].toUpperCase()}${delivery.status.substring(1)}';
+
+    showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: scheme.onSurfaceVariant.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Delivery Details',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              const SizedBox(height: 20),
+
+              // Farmer Info Row
+              Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: scheme.primary.withValues(alpha: 0.1),
+                    child: Icon(Icons.person_outline_rounded,
+                        color: scheme.primary),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          farmer?.name ?? 'Unknown Farmer',
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                        ),
+                        Text(
+                          'Farmer Supplier',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const Divider(height: 32),
+
+              // Grid Info
+              GridView.count(
+                crossAxisCount: 2,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                mainAxisSpacing: 16,
+                crossAxisSpacing: 16,
+                childAspectRatio: 2.8,
+                children: [
+                  _DetailGridItem(
+                    icon: Icons.calendar_today_rounded,
+                    label: 'Date',
+                    value: DateFormat('MMM d, y').format(delivery.date),
+                  ),
+                  _DetailGridItem(
+                    icon: Icons.local_drink_rounded,
+                    label: 'Volume',
+                    value: '${delivery.volumeLiters.toStringAsFixed(1)} L',
+                  ),
+                  _DetailGridItem(
+                    icon: Icons.scale_rounded,
+                    label: 'Weight',
+                    value: '${delivery.weightKg.toStringAsFixed(1)} kg',
+                  ),
+                  _DetailGridItem(
+                    icon: Icons.info_outline_rounded,
+                    label: 'Status',
+                    value: statusCapitalized,
+                    valueColor: delivery.status == 'classified'
+                        ? const Color(0xFF16A34A)
+                        : const Color(0xFFF59E0B),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              // Classification Banner
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: (delivery.classification == 'Class A'
+                          ? const Color(0xFF16A34A)
+                          : delivery.classification == 'Class B'
+                              ? const Color(0xFFF59E0B)
+                              : scheme.outlineVariant)
+                      .withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      delivery.classification != null
+                          ? Icons.verified_rounded
+                          : Icons.hourglass_empty_rounded,
+                      color: delivery.classification == 'Class A'
+                          ? const Color(0xFF16A34A)
+                          : delivery.classification == 'Class B'
+                              ? const Color(0xFFF59E0B)
+                              : scheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Quality Classification',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          Text(
+                            delivery.classification ?? 'Pending Review',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: delivery.classification == 'Class A'
+                                      ? const Color(0xFF16A34A)
+                                      : delivery.classification == 'Class B'
+                                          ? const Color(0xFFF59E0B)
+                                          : scheme.onSurface,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   // ─── Build ─────────────────────────────────────────────────────────────────
 
   @override
@@ -226,9 +392,7 @@ class _DeliveriesScreenState extends State<DeliveriesScreen> {
                         child: DeliveryListTile(
                           delivery: delivery,
                           farmer: farmer,
-                          onTap: () => context.push(
-                            '/logistics/deliveries/${delivery.id}',
-                          ),
+                          onTap: () => _openDetailSheet(state, delivery),
                           trailing: PopupMenuButton<String>(
                             icon: const Icon(Icons.more_vert, size: 20),
                             onSelected: (action) {
@@ -335,51 +499,48 @@ class _DeliveriesScreenState extends State<DeliveriesScreen> {
   }
 }
 
-class DeliveryDetailScreen extends StatelessWidget {
-  const DeliveryDetailScreen({super.key, required this.deliveryId});
+class _DetailGridItem extends StatelessWidget {
+  const _DetailGridItem({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.valueColor,
+  });
 
-  final String deliveryId;
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color? valueColor;
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<AppState>();
-    final delivery = state.deliveryById(deliveryId);
-
-    if (delivery == null) {
-      return const Scaffold(body: Center(child: Text('Delivery not found.')));
-    }
-
-    final farmer = state.farmerById(delivery.farmerSupplierId);
-
-    return Scaffold(
-      appBar: AppBar(title: const Text('Delivery Detail')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    farmer?.name ?? 'Unknown Farmer',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 10),
-                  Text('Date: ${DateFormat('MMM d, y').format(delivery.date)}'),
-                  Text('Volume: ${delivery.volumeLiters.toStringAsFixed(1)} L'),
-                  Text('Weight: ${delivery.weightKg.toStringAsFixed(1)} kg'),
-                  Text('Status: ${delivery.status}'),
-                  Text(
-                    'Classification: ${delivery.classification ?? 'Pending'}',
-                  ),
-                ],
+    final scheme = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        Icon(icon,
+            size: 20, color: scheme.onSurfaceVariant.withValues(alpha: 0.7)),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                label,
+                style: Theme.of(context).textTheme.bodySmall,
               ),
-            ),
+              Text(
+                value,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: valueColor,
+                    ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

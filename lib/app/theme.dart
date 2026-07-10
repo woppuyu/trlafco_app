@@ -128,7 +128,11 @@ class AppTheme {
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20)),
         side: BorderSide.none,
-        labelStyle: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w500),
+        backgroundColor: scheme.primary.withValues(alpha: 0.1),
+        labelStyle: GoogleFonts.inter(
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+            color: scheme.primary),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       ),
       navigationBarTheme: NavigationBarThemeData(

@@ -354,9 +354,14 @@ void main() {
 
     // The farmer's name should appear in the list.
     expect(find.text(farmer.name), findsOneWidget);
-    // All three action buttons should be present.
-    expect(find.text('A'), findsOneWidget);
-    expect(find.text('B'), findsOneWidget);
-    expect(find.text('R'), findsOneWidget);
+
+    // Tap the tile to open the classification bottom sheet.
+    await tester.tap(find.text(farmer.name));
+    await tester.pumpAndSettle();
+
+    // The classification buttons inside the bottom sheet should be present.
+    expect(find.text('Class A'), findsOneWidget);
+    expect(find.text('Class B'), findsOneWidget);
+    expect(find.text('Rejected'), findsOneWidget);
   });
 }

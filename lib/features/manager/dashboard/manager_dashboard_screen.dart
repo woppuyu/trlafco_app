@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -80,6 +81,8 @@ class ManagerDashboardScreen extends StatelessWidget {
                 height: 180,
                 child: LineChart(
                   LineChartData(
+                    minY: 1000,
+                    maxY: 1400,
                     borderData: FlBorderData(show: false),
                     gridData: FlGridData(
                       show: true,
@@ -139,8 +142,9 @@ class ManagerDashboardScreen extends StatelessWidget {
                               'Sat',
                               'Sun'
                             ];
-                            return Padding(
-                              padding: const EdgeInsets.only(top: 6),
+                            return SideTitleWidget(
+                              meta: meta,
+                              space: 6,
                               child: Text(
                                 days[value.toInt()],
                                 style: Theme.of(context)
@@ -154,10 +158,15 @@ class ManagerDashboardScreen extends StatelessWidget {
                       leftTitles: AxisTitles(
                         sideTitles: SideTitles(
                           showTitles: true,
-                          reservedSize: 42,
-                          getTitlesWidget: (value, meta) => Text(
-                            '${(value / 1000).toStringAsFixed(1)}k',
-                            style: Theme.of(context).textTheme.labelSmall,
+                          reservedSize: 40,
+                          interval: 100,
+                          getTitlesWidget: (value, meta) => SideTitleWidget(
+                            meta: meta,
+                            space: 8,
+                            child: Text(
+                              '${(value / 1000).toStringAsFixed(1)}k',
+                              style: Theme.of(context).textTheme.labelSmall,
+                            ),
                           ),
                         ),
                       ),
@@ -182,12 +191,15 @@ class ManagerDashboardScreen extends StatelessWidget {
                     color: const Color(0xFFF59E0B),
                     label:
                         '${state.pendingDeliveries.length} deliveries awaiting classification',
+                    onTap: () => context.go('/manager/records?tab=0'),
                   ),
                   const Divider(height: 1),
                   _ActionRow(
                     icon: Icons.payments_rounded,
                     color: const Color(0xFF8B5CF6),
-                    label: 'Payment records pending release',
+                    label:
+                        '${state.payments.where((p) => p.status == 'pending').length} payment records pending release',
+                    onTap: () => context.go('/manager/records?tab=2'),
                   ),
                 ],
               ),
@@ -314,43 +326,49 @@ class _ActionRow extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.label,
+    this.onTap,
   });
 
   final IconData icon;
   final Color color;
   final String label;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Row(
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+        child: Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, size: 16, color: color),
             ),
-            child: Icon(icon, size: 16, color: color),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              label,
-              style: GoogleFonts.inter(fontSize: 13),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: GoogleFonts.inter(fontSize: 13),
+              ),
             ),
-          ),
-          Icon(
-            Icons.chevron_right_rounded,
-            size: 18,
-            color: Theme.of(context)
-                .colorScheme
-                .onSurface
-                .withValues(alpha: 0.3),
-          ),
-        ],
+            Icon(
+              Icons.chevron_right_rounded,
+              size: 18,
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.3),
+            ),
+          ],
+        ),
       ),
     );
   }

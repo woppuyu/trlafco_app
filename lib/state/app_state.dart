@@ -225,13 +225,29 @@ class AppState extends ChangeNotifier {
   // ─── Computed metrics ─────────────────────────────────────────────────────
 
   List<Delivery> get pendingDeliveries {
-    return deliveries.where((e) => e.status == 'pending').toList();
+    return deliveries.where((d) => d.status == 'pending').toList();
+  }
+
+  List<Delivery> get classifiedDeliveries {
+    return deliveries.where((d) => d.status == 'classified').toList();
   }
 
   double get totalRawMilkStock {
     return deliveries
         .where((e) =>
             e.classification == 'Class A' || e.classification == 'Class B')
+        .fold(0, (sum, e) => sum + e.volumeLiters);
+  }
+
+  double get classARawMilkStock {
+    return deliveries
+        .where((e) => e.classification == 'Class A')
+        .fold(0, (sum, e) => sum + e.volumeLiters);
+  }
+
+  double get classBRawMilkStock {
+    return deliveries
+        .where((e) => e.classification == 'Class B')
         .fold(0, (sum, e) => sum + e.volumeLiters);
   }
 
