@@ -102,7 +102,7 @@ class DeliveryListTile extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '$dateLabel  ·  ${delivery.volumeLiters.toStringAsFixed(0)} L  ·  ${delivery.weightKg.toStringAsFixed(0)} kg',
+                        '$dateLabel  ·  ${delivery.volumeLiters.toStringAsFixed(0)} L',
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ],

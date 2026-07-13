@@ -5,36 +5,36 @@ class Delivery {
     required this.farmerSupplierId,
     required this.date,
     required this.volumeLiters,
-    required this.weightKg,
     required this.classification,
     required this.status,
+    this.paymentPeriodStart,
   });
 
   final String id;
   final String farmerSupplierId;
   final DateTime date;
   final double volumeLiters;
-  final double weightKg;
   final String? classification;
   final String status;
+  final DateTime? paymentPeriodStart;
 
   Delivery copyWith({
     String? id,
     String? farmerSupplierId,
     DateTime? date,
     double? volumeLiters,
-    double? weightKg,
     String? classification,
     String? status,
+    DateTime? paymentPeriodStart,
   }) {
     return Delivery(
       id: id ?? this.id,
       farmerSupplierId: farmerSupplierId ?? this.farmerSupplierId,
       date: date ?? this.date,
       volumeLiters: volumeLiters ?? this.volumeLiters,
-      weightKg: weightKg ?? this.weightKg,
       classification: classification ?? this.classification,
       status: status ?? this.status,
+      paymentPeriodStart: paymentPeriodStart ?? this.paymentPeriodStart,
     );
   }
 
@@ -43,9 +43,9 @@ class Delivery {
         'farmerSupplierId': farmerSupplierId,
         'date': date.toIso8601String(),
         'volumeLiters': volumeLiters,
-        'weightKg': weightKg,
         'classification': classification,
         'status': status,
+        'paymentPeriodStart': paymentPeriodStart?.toIso8601String(),
       };
 
   factory Delivery.fromJson(Map<String, dynamic> json) {
@@ -54,9 +54,11 @@ class Delivery {
       farmerSupplierId: json['farmerSupplierId'] as String,
       date: DateTime.parse(json['date'] as String),
       volumeLiters: (json['volumeLiters'] as num).toDouble(),
-      weightKg: (json['weightKg'] as num).toDouble(),
       classification: json['classification'] as String?,
       status: json['status'] as String,
+      paymentPeriodStart: json['paymentPeriodStart'] != null
+          ? DateTime.parse(json['paymentPeriodStart'] as String)
+          : null,
     );
   }
 }

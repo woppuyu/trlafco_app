@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:trlafco_app/models/farmer_supplier.dart';
+import 'package:trlafco_app/models/payment.dart';
 import 'package:trlafco_app/state/app_state.dart';
 
 class ManagerRecordsScreen extends StatelessWidget {
@@ -14,6 +15,7 @@ class ManagerRecordsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
+      key: ValueKey(initialIndex),
       length: 3,
       initialIndex: initialIndex ?? 0,
       child: const Scaffold(
@@ -85,7 +87,7 @@ class _FarmerSuppliersTab extends StatelessWidget {
               crossAxisCount: crossAxisCount,
               crossAxisSpacing: 8,
               mainAxisSpacing: 8,
-              childAspectRatio: isWide ? 3.2 : 4.0,
+              childAspectRatio: isWide ? 2.6 : 3.0,
             ),
             itemCount: state.farmers.length,
             itemBuilder: (context, index) {
@@ -95,8 +97,13 @@ class _FarmerSuppliersTab extends StatelessWidget {
                   onTap: () =>
                       context.push('/manager/records/farmer/${farmer.id}'),
                   title: Text(farmer.name),
-                  subtitle:
-                      Text('${farmer.barangay} • ${farmer.contactNumber}'),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(farmer.barangay),
+                      Text(farmer.contactNumber),
+                    ],
+                  ),
                   trailing: Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 8, vertical: 3),
@@ -249,76 +256,355 @@ class _PaymentsTab extends StatelessWidget {
             final payment = state.payments[index];
             final farmer = state.farmerById(payment.farmerSupplierId);
             return Card(
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: payment.status == 'paid'
-                      ? Colors.green.withValues(alpha: 0.1)
-                      : Colors.orange.withValues(alpha: 0.1),
-                  child: Icon(
-                    payment.status == 'paid'
-                        ? Icons.check_circle_rounded
-                        : Icons.pending_rounded,
-                    color: payment.status == 'paid' ? Colors.green : Colors.orange,
-                  ),
-                ),
-                title: Text(
-                    '${farmer?.name ?? 'Unknown'} • ${payment.periodLabel}'),
-                subtitle: Text(
-                  '${payment.totalVolumeLiters.toStringAsFixed(0)} L • PHP ${payment.totalAmount.toStringAsFixed(2)}',
-                ),
-                trailing: payment.status == 'paid'
-                    ? Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
+              child: InkWell(
+                onTap: () => _showPaymentBreakdown(context, state, payment, farmer),
+                borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: payment.status == 'paid'
+                            ? Colors.green.withValues(alpha: 0.1)
+                            : Colors.orange.withValues(alpha: 0.1),
+                        child: Icon(
+                          payment.status == 'paid'
+                              ? Icons.check_circle_rounded
+                              : Icons.pending_rounded,
+                          color: payment.status == 'paid' ? Colors.green : Colors.orange,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              farmer?.name ?? 'Unknown',
+                              style: GoogleFonts.inter(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              payment.periodLabel,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                  ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'PHP ${payment.totalAmount.toStringAsFixed(2)}',
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${payment.totalVolumeLiters.toStringAsFixed(0)} L',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF16A34A).withValues(alpha: 0.1),
+                          color: (payment.status == 'paid'
+                                  ? const Color(0xFF16A34A)
+                                  : const Color(0xFFD97706))
+                              .withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: (payment.status == 'paid'
+                                    ? const Color(0xFF16A34A)
+                                    : const Color(0xFFD97706))
+                                .withValues(alpha: 0.3),
+                          ),
                         ),
                         child: Text(
-                          'Paid',
+                          payment.status == 'paid' ? 'Paid' : 'Pending',
                           style: GoogleFonts.inter(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
-                            color: const Color(0xFF16A34A),
+                            color: payment.status == 'paid'
+                                ? const Color(0xFF16A34A)
+                                : const Color(0xFFD97706),
                           ),
                         ),
-                      )
-                    : TextButton(
-                        onPressed: () async {
-                          final confirm = await showDialog<bool>(
-                            context: context,
-                            builder: (dialogContext) => AlertDialog(
-                              title: const Text('Mark as Paid?'),
-                              content: const Text(
-                                  'Confirm payment release for this record.'),
-                              actions: [
-                                TextButton(
-                                  onPressed: () =>
-                                      Navigator.pop(dialogContext, false),
-                                  child: const Text('Cancel'),
-                                ),
-                                ElevatedButton(
-                                  onPressed: () =>
-                                      Navigator.pop(dialogContext, true),
-                                  child: const Text('Confirm'),
-                                ),
-                              ],
-                            ),
-                          );
-                          if (confirm == true && context.mounted) {
-                            await state.markPaymentPaid(payment.id);
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Payment marked as paid'),
-                                  behavior: SnackBarBehavior.floating,
-                                ),
-                              );
-                            }
-                          }
-                        },
-                        child: const Text('Mark Paid'),
                       ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showPaymentBreakdown(
+    BuildContext context,
+    AppState state,
+    Payment payment,
+    FarmerSupplier? farmer,
+  ) {
+    final periodStart = payment.periodStart;
+
+
+    final periodDeliveries = state.deliveries.where((d) {
+      if (d.farmerSupplierId != payment.farmerSupplierId) return false;
+      final dPeriodStart = d.paymentPeriodStart ??
+          DateTime(d.date.year, d.date.month, d.date.day <= 15 ? 1 : 16);
+      return dPeriodStart.year == periodStart.year &&
+             dPeriodStart.month == periodStart.month &&
+             dPeriodStart.day == periodStart.day;
+    }).toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
+
+    final scheme = Theme.of(context).colorScheme;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.6,
+          minChildSize: 0.4,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (context, scrollController) {
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: scheme.onSurfaceVariant.withValues(alpha: 0.4),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    Text(
+                      'Payout Breakdown',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${farmer?.name ?? 'Unknown Farmer'} • ${payment.periodLabel}',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // Summary Card
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: scheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: scheme.outlineVariant.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          Column(
+                            children: [
+                              Text(
+                                '${payment.totalVolumeLiters.toStringAsFixed(1)} L',
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Total Volume',
+                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                      color: scheme.onSurface.withValues(alpha: 0.5),
+                                    ),
+                              ),
+                            ],
+                          ),
+                          Container(
+                            width: 1,
+                            height: 32,
+                            color: scheme.outlineVariant.withValues(alpha: 0.5),
+                          ),
+                          Column(
+                            children: [
+                              Text(
+                                'PHP ${payment.totalAmount.toStringAsFixed(2)}',
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: scheme.primary,
+                                    ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Total Payout',
+                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                      color: scheme.onSurface.withValues(alpha: 0.5),
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Deliveries List',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 10),
+                    Expanded(
+                      child: periodDeliveries.isEmpty
+                          ? Center(
+                              child: Text(
+                                'No deliveries found for this period.',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            )
+                          : ListView.builder(
+                              controller: scrollController,
+                              itemCount: periodDeliveries.length,
+                              itemBuilder: (context, index) {
+                                final d = periodDeliveries[index];
+                                final classColor = d.classification == 'Class A'
+                                    ? const Color(0xFF16A34A)
+                                    : d.classification == 'Class B'
+                                        ? const Color(0xFFD97706)
+                                        : d.classification == 'Rejected'
+                                            ? const Color(0xFFDC2626)
+                                            : const Color(0xFF6B7280);
+
+                                final isAccepted = d.classification == 'Class A' || d.classification == 'Class B';
+                                final payout = isAccepted ? d.volumeLiters * 45.0 : 0.0;
+
+                                return Card(
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 12,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              DateFormat('EEEE, MMM d').format(d.date),
+                                              style: GoogleFonts.inter(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              '${d.volumeLiters.toStringAsFixed(1)} L · PHP ${payout.toStringAsFixed(2)}',
+                                              style: Theme.of(context).textTheme.bodySmall,
+                                            ),
+                                          ],
+                                        ),
+                                        const Spacer(),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 3,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: classColor.withValues(alpha: 0.1),
+                                            borderRadius: BorderRadius.circular(20),
+                                          ),
+                                          child: Text(
+                                            d.classification ?? 'Pending',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                              color: classColor,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                    if (payment.status == 'pending') ...[
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: ElevatedButton.icon(
+                          key: const Key('mark_paid_from_sheet_button'),
+                          onPressed: () async {
+                            final confirm = await showDialog<bool>(
+                              context: context,
+                              builder: (dialogContext) => AlertDialog(
+                                title: const Text('Mark as Paid?'),
+                                content: const Text(
+                                    'Confirm payment release for this record.'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.pop(dialogContext, false),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: () =>
+                                        Navigator.pop(dialogContext, true),
+                                    child: const Text('Confirm'),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (confirm == true && context.mounted) {
+                              await state.markPaymentPaid(payment.id);
+                              if (context.mounted) {
+                                Navigator.pop(context); // Close bottom sheet
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Payment marked as paid'),
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          icon: const Icon(Icons.check_circle_rounded, size: 18),
+                          label: const Text('Mark as Paid'),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
             );
           },
@@ -393,7 +679,12 @@ class FarmerSupplierDetailScreen extends StatelessWidget {
                           style: Theme.of(context).textTheme.titleLarge),
                       const SizedBox(height: 4),
                       Text(
-                        '${farmer.barangay}  ·  ${farmer.contactNumber}',
+                        farmer.barangay,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        farmer.contactNumber,
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ],

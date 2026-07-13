@@ -27,6 +27,7 @@ class _FarmerFormSheetState extends State<FarmerFormSheet> {
   late final TextEditingController _barangayController;
   late final TextEditingController _contactController;
   late String _status;
+  bool _isSaving = false;
 
   bool get _isEditing => widget.existingFarmer != null;
 
@@ -51,34 +52,43 @@ class _FarmerFormSheetState extends State<FarmerFormSheet> {
   }
 
   Future<void> _save() async {
+    if (_isSaving) return;
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    if (_isEditing) {
-      final updated = FarmerSupplier(
-        id: widget.existingFarmer!.id,
-        name: _nameController.text.trim(),
-        barangay: _barangayController.text.trim(),
-        contactNumber: _contactController.text.trim(),
-        status: _status,
-      );
-      await widget.appState.updateFarmerSupplier(updated);
-    } else {
-      final now = DateTime.now().microsecondsSinceEpoch;
-      await widget.appState.addFarmerSupplier(
-        FarmerSupplier(
-          id: 'FS-$now',
+    setState(() => _isSaving = true);
+
+    try {
+      if (_isEditing) {
+        final updated = FarmerSupplier(
+          id: widget.existingFarmer!.id,
           name: _nameController.text.trim(),
           barangay: _barangayController.text.trim(),
           contactNumber: _contactController.text.trim(),
           status: _status,
-        ),
-      );
-    }
+        );
+        await widget.appState.updateFarmerSupplier(updated);
+      } else {
+        final now = DateTime.now().microsecondsSinceEpoch;
+        await widget.appState.addFarmerSupplier(
+          FarmerSupplier(
+            id: 'FS-$now',
+            name: _nameController.text.trim(),
+            barangay: _barangayController.text.trim(),
+            contactNumber: _contactController.text.trim(),
+            status: _status,
+          ),
+        );
+      }
 
-    if (mounted) {
-      Navigator.of(context).pop(true);
+      if (mounted) {
+        Navigator.of(context).pop(true);
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
     }
   }
 
@@ -130,8 +140,10 @@ class _FarmerFormSheetState extends State<FarmerFormSheet> {
                   if (value == null || value.trim().isEmpty) {
                     return 'Contact number is required';
                   }
-                  if (value.trim().length < 7) {
-                    return 'Enter a valid contact number';
+                  final trimmed = value.trim();
+                  final phoneRegex = RegExp(r'^(\+63|0)9\d{2}[- ]?\d{3}[- ]?\d{4}$');
+                  if (!phoneRegex.hasMatch(trimmed)) {
+                    return 'Enter a valid PH mobile number (e.g. 0917-XXX-XXXX)';
                   }
                   return null;
                 },
@@ -153,11 +165,22 @@ class _FarmerFormSheetState extends State<FarmerFormSheet> {
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   key: const Key('save_farmer_button'),
-                  onPressed: _save,
-                  icon: Icon(_isEditing ? Icons.save : Icons.person_add),
-                  label: Text(_isEditing
-                      ? 'Save Changes'
-                      : 'Save Farmer-Supplier'),
+                  onPressed: _isSaving ? null : _save,
+                  icon: _isSaving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.grey,
+                          ),
+                        )
+                      : Icon(_isEditing ? Icons.save : Icons.person_add),
+                  label: Text(
+                    _isSaving
+                        ? 'Saving...'
+                        : (_isEditing ? 'Save Changes' : 'Save Farmer-Supplier'),
+                  ),
                 ),
               ),
             ],

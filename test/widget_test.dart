@@ -38,7 +38,6 @@ Delivery _pendingDelivery({String id = 'DL-T1'}) => Delivery(
       farmerSupplierId: 'FS-T1',
       date: DateTime.now(),
       volumeLiters: 100,
-      weightKg: 103,
       classification: null,
       status: 'pending',
     );
@@ -154,7 +153,6 @@ void main() {
 
     expect(find.text('Please choose a farmer-supplier'), findsOneWidget);
     expect(find.text('Volume is required'), findsOneWidget);
-    expect(find.text('Weight is required'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('delivery_farmer_dropdown')));
     await tester.pumpAndSettle();
@@ -163,13 +161,17 @@ void main() {
 
     await tester.enterText(
         find.byKey(const Key('delivery_volume_field')), '-1');
-    await tester.enterText(
-        find.byKey(const Key('delivery_weight_field')), 'abc');
     await tester.tap(find.byKey(const Key('save_delivery_button')));
     await tester.pumpAndSettle();
 
     expect(find.text('Enter a valid volume'), findsOneWidget);
-    expect(find.text('Enter a valid weight'), findsOneWidget);
+
+    await tester.enterText(
+        find.byKey(const Key('delivery_volume_field')), '10000');
+    await tester.tap(find.byKey(const Key('save_delivery_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Volume cannot exceed 9999 L'), findsOneWidget);
   });
 
   // ── Farmer form ──────────────────────────────────────────────────────────
@@ -194,6 +196,32 @@ void main() {
     expect(find.text('Contact number is required'), findsOneWidget);
   });
 
+  testWidgets('Farmer form validates contact number format', (tester) async {
+    final appState = _makeState();
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: appState,
+        child: MaterialApp(
+          home: Scaffold(body: FarmerFormSheet(appState: appState)),
+        ),
+      ),
+    );
+
+    // Enter invalid phone
+    await tester.enterText(find.byType(TextFormField).at(2), '12345');
+    await tester.tap(find.byKey(const Key('save_farmer_button')));
+    await tester.pumpAndSettle();
+    expect(find.text('Enter a PH mobile number (e.g. 0917-XXX-XXXX)'), findsNothing); // should be the error text:
+    expect(find.text('Enter a valid PH mobile number (e.g. 0917-XXX-XXXX)'), findsOneWidget);
+
+    // Enter valid phone
+    await tester.enterText(find.byType(TextFormField).at(2), '0917-821-4401');
+    await tester.tap(find.byKey(const Key('save_farmer_button')));
+    await tester.pumpAndSettle();
+    expect(find.text('Enter a valid PH mobile number (e.g. 0917-XXX-XXXX)'), findsNothing);
+  });
+
   // ── AppState business logic ──────────────────────────────────────────────
 
   test('classifyDelivery removes item from pendingDeliveries', () async {
@@ -209,6 +237,121 @@ void main() {
     expect(state.pendingDeliveries, isEmpty);
     expect(state.deliveries.first.classification, 'Class A');
     expect(state.deliveries.first.status, 'classified');
+  });
+
+  test('classifyDelivery creates a pending payment record for Class A/B deliveries', () async {
+    final state = _makeState(deliveries: [_pendingDelivery()]);
+
+    expect(state.payments, isEmpty);
+
+    await state.classifyDelivery(
+      deliveryId: 'DL-T1',
+      classification: 'Class A',
+    );
+
+    expect(state.payments, hasLength(1));
+    final payment = state.payments.first;
+    expect(payment.totalVolumeLiters, 100.0);
+    expect(payment.totalAmount, 4500.0);
+    expect(payment.status, 'pending');
+  });
+
+  test('classifyDelivery removes payment record if reclassified to Rejected', () async {
+    final state = _makeState(deliveries: [_pendingDelivery()]);
+
+    await state.classifyDelivery(
+      deliveryId: 'DL-T1',
+      classification: 'Class A',
+    );
+    expect(state.payments, hasLength(1));
+
+    await state.classifyDelivery(
+      deliveryId: 'DL-T1',
+      classification: 'Rejected',
+    );
+    expect(state.payments, isEmpty);
+  });
+
+  test('classifyDelivery aggregates multiple deliveries for the same farmer and half-month', () async {
+    final now = DateTime.now();
+    final d1 = Delivery(
+      id: 'DL-T1',
+      farmerSupplierId: 'FS-T1',
+      date: DateTime(now.year, now.month, 5),
+      volumeLiters: 100,
+      classification: null,
+      status: 'pending',
+    );
+    final d2 = Delivery(
+      id: 'DL-T2',
+      farmerSupplierId: 'FS-T1',
+      date: DateTime(now.year, now.month, 10),
+      volumeLiters: 150,
+      classification: null,
+      status: 'pending',
+    );
+    final state = _makeState(deliveries: [d1, d2]);
+
+    await state.classifyDelivery(deliveryId: 'DL-T1', classification: 'Class A');
+    expect(state.payments.first.totalVolumeLiters, 100.0);
+    expect(state.payments.first.totalAmount, 4500.0);
+
+    await state.classifyDelivery(deliveryId: 'DL-T2', classification: 'Class B');
+    expect(state.payments, hasLength(1));
+    expect(state.payments.first.totalVolumeLiters, 250.0);
+    expect(state.payments.first.totalAmount, 11250.0);
+  });
+
+  test('classifyDelivery rolls over to the next period if the current period is already paid', () async {
+    final now = DateTime.now();
+    final delivery = Delivery(
+      id: 'DL-T1',
+      farmerSupplierId: 'FS-T1',
+      date: DateTime(now.year, now.month, 5),
+      volumeLiters: 100,
+      classification: null,
+      status: 'pending',
+    );
+    final isFirstHalf = 5 <= 15;
+    final periodStart = DateTime(now.year, now.month, isFirstHalf ? 1 : 16);
+    final lastDay = DateTime(now.year, now.month + 1, 0).day;
+    final periodEndDay = isFirstHalf ? 15 : lastDay;
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final monthAbbr = months[now.month - 1];
+    final periodLabel = '$monthAbbr ${isFirstHalf ? 1 : 16}–$periodEndDay, ${now.year}';
+
+    final existingPaidPayment = Payment(
+      id: 'PAY-PAID-1',
+      farmerSupplierId: 'FS-T1',
+      periodLabel: periodLabel,
+      periodStart: periodStart,
+      totalVolumeLiters: 50.0,
+      totalAmount: 2250.0,
+      status: 'paid',
+    );
+
+    final state = _makeState(deliveries: [delivery]);
+    state.payments = [existingPaidPayment];
+
+    await state.classifyDelivery(
+      deliveryId: 'DL-T1',
+      classification: 'Class A',
+    );
+
+    final paidPayment = state.payments.firstWhere((p) => p.id == 'PAY-PAID-1');
+    expect(paidPayment.status, 'paid');
+    expect(paidPayment.totalVolumeLiters, 50.0);
+
+    expect(state.payments, hasLength(2));
+    final rolledPayment = state.payments.firstWhere((p) => p.id != 'PAY-PAID-1');
+    expect(rolledPayment.status, 'pending');
+    expect(rolledPayment.totalVolumeLiters, 100.0);
+    expect(rolledPayment.totalAmount, 4500.0);
+
+    final expectedNextStart = isFirstHalf
+        ? DateTime(now.year, now.month, 16)
+        : (now.month == 12 ? DateTime(now.year + 1, 1, 1) : DateTime(now.year, now.month + 1, 1));
+    expect(rolledPayment.periodStart, expectedNextStart);
   });
 
   test('markPaymentPaid updates payment status', () async {

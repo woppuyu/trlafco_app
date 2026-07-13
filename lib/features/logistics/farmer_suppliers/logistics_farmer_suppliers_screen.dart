@@ -130,7 +130,7 @@ class _LogisticsFarmerSuppliersScreenState
                   crossAxisCount: crossAxisCount,
                   crossAxisSpacing: 8,
                   mainAxisSpacing: 8,
-                  childAspectRatio: isWide ? 3.2 : 3.8,
+                  childAspectRatio: isWide ? 2.6 : 3.0,
                 ),
                 itemCount: state.farmers.length,
                 itemBuilder: (context, index) {
@@ -149,92 +149,115 @@ class _LogisticsFarmerSuppliersScreenState
                         ).colorScheme.outlineVariant.withValues(alpha: 0.5),
                       ),
                     ),
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.symmetric(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
                         horizontal: 14,
-                        vertical: 6,
+                        vertical: 10,
                       ),
-                      leading: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Icon(
-                          Icons.agriculture_rounded,
-                          size: 18,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                      ),
-                      title: Text(
-                        farmer.name,
-                        style: Theme.of(context).textTheme.titleSmall,
-                      ),
-                      subtitle: Text(
-                        '${farmer.barangay} · ${farmer.contactNumber}',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
+                            width: 36,
+                            height: 36,
                             decoration: BoxDecoration(
-                              color: statusColor.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(20),
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                            child: Text(
-                              farmer.status,
-                              style: GoogleFonts.inter(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: statusColor,
-                              ),
+                            child: Icon(
+                              Icons.agriculture_rounded,
+                              size: 18,
+                              color: Theme.of(context).colorScheme.primary,
                             ),
                           ),
-                          const SizedBox(width: 4),
-                          PopupMenuButton<String>(
-                            icon: const Icon(Icons.more_vert, size: 20),
-                            onSelected: (action) {
-                              if (action == 'edit') {
-                                _openEditSheet(context, state, farmer);
-                              } else if (action == 'delete') {
-                                _confirmDelete(context, state, farmer);
-                              }
-                            },
-                            itemBuilder: (_) => [
-                              const PopupMenuItem(
-                                value: 'edit',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.edit_outlined, size: 18),
-                                    SizedBox(width: 8),
-                                    Text('Edit'),
-                                  ],
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  farmer.name,
+                                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  farmer.barangay,
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  farmer.contactNumber,
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: statusColor.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  farmer.status,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: statusColor,
+                                  ),
                                 ),
                               ),
-                              const PopupMenuItem(
-                                value: 'delete',
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.person_remove_outlined,
-                                      size: 18,
-                                      color: Colors.red,
+                              const SizedBox(width: 4),
+                              PopupMenuButton<String>(
+                                icon: const Icon(Icons.more_vert, size: 20),
+                                onSelected: (action) {
+                                  if (action == 'edit') {
+                                    _openEditSheet(context, state, farmer);
+                                  } else if (action == 'delete') {
+                                    _confirmDelete(context, state, farmer);
+                                  }
+                                },
+                                itemBuilder: (_) => [
+                                  const PopupMenuItem(
+                                    value: 'edit',
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.edit_outlined, size: 18),
+                                        SizedBox(width: 8),
+                                        Text('Edit'),
+                                      ],
                                     ),
-                                    SizedBox(width: 8),
-                                    Text(
-                                      'Remove',
-                                      style: TextStyle(color: Colors.red),
+                                  ),
+                                  const PopupMenuItem(
+                                    value: 'delete',
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.person_remove_outlined,
+                                          size: 18,
+                                          color: Colors.red,
+                                        ),
+                                        SizedBox(width: 8),
+                                        Text(
+                                          'Remove',
+                                          style: TextStyle(color: Colors.red),
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),

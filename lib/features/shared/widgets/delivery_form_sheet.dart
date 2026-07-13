@@ -26,8 +26,8 @@ class _DeliveryFormSheetState extends State<DeliveryFormSheet> {
   final _formKey = GlobalKey<FormState>();
   String? _selectedFarmerId;
   final _volumeController = TextEditingController();
-  final _weightController = TextEditingController();
   late DateTime _selectedDate;
+  bool _isSaving = false;
 
   bool get _isEditing => widget.existingDelivery != null;
 
@@ -39,14 +39,11 @@ class _DeliveryFormSheetState extends State<DeliveryFormSheet> {
     _selectedDate = existing?.date ?? DateTime.now();
     _volumeController.text =
         existing != null ? existing.volumeLiters.toStringAsFixed(1) : '';
-    _weightController.text =
-        existing != null ? existing.weightKg.toStringAsFixed(1) : '';
   }
 
   @override
   void dispose() {
     _volumeController.dispose();
-    _weightController.dispose();
     super.dispose();
   }
 
@@ -63,38 +60,44 @@ class _DeliveryFormSheetState extends State<DeliveryFormSheet> {
   }
 
   Future<void> _save() async {
+    if (_isSaving) return;
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    final volume = double.parse(_volumeController.text.trim());
-    final weight = double.parse(_weightController.text.trim());
+    setState(() => _isSaving = true);
 
-    if (_isEditing) {
-      final updated = widget.existingDelivery!.copyWith(
-        farmerSupplierId: _selectedFarmerId!,
-        date: _selectedDate,
-        volumeLiters: volume,
-        weightKg: weight,
-      );
-      await widget.appState.updateDelivery(updated);
-    } else {
-      final now = DateTime.now().microsecondsSinceEpoch;
-      await widget.appState.addDelivery(
-        Delivery(
-          id: 'DL-$now',
+    try {
+      final volume = double.parse(_volumeController.text.trim());
+
+      if (_isEditing) {
+        final updated = widget.existingDelivery!.copyWith(
           farmerSupplierId: _selectedFarmerId!,
           date: _selectedDate,
           volumeLiters: volume,
-          weightKg: weight,
-          classification: null,
-          status: 'pending',
-        ),
-      );
-    }
+        );
+        await widget.appState.updateDelivery(updated);
+      } else {
+        final now = DateTime.now().microsecondsSinceEpoch;
+        await widget.appState.addDelivery(
+          Delivery(
+            id: 'DL-$now',
+            farmerSupplierId: _selectedFarmerId!,
+            date: _selectedDate,
+            volumeLiters: volume,
+            classification: null,
+            status: 'pending',
+          ),
+        );
+      }
 
-    if (mounted) {
-      Navigator.of(context).pop(true);
+      if (mounted) {
+        Navigator.of(context).pop(true);
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
     }
   }
 
@@ -165,23 +168,8 @@ class _DeliveryFormSheetState extends State<DeliveryFormSheet> {
                     if (parsed == null || parsed <= 0) {
                       return 'Enter a valid volume';
                     }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  key: const Key('delivery_weight_field'),
-                  controller: _weightController,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(labelText: 'Weight (kg)'),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Weight is required';
-                    }
-                    final parsed = double.tryParse(value);
-                    if (parsed == null || parsed <= 0) {
-                      return 'Enter a valid weight';
+                    if (parsed > 9999) {
+                      return 'Volume cannot exceed 9999 L';
                     }
                     return null;
                   },
@@ -191,10 +179,22 @@ class _DeliveryFormSheetState extends State<DeliveryFormSheet> {
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     key: const Key('save_delivery_button'),
-                    onPressed: _save,
-                    icon: Icon(_isEditing ? Icons.save : Icons.add_task),
+                    onPressed: _isSaving ? null : _save,
+                    icon: _isSaving
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.grey,
+                            ),
+                          )
+                        : Icon(_isEditing ? Icons.save : Icons.add_task),
                     label: Text(
-                        _isEditing ? 'Save Changes' : 'Save Delivery'),
+                      _isSaving
+                          ? 'Saving...'
+                          : (_isEditing ? 'Save Changes' : 'Save Delivery'),
+                    ),
                   ),
                 ),
               ],

@@ -8,6 +8,7 @@ class Payment {
     required this.totalVolumeLiters,
     required this.totalAmount,
     required this.status,
+    this.deliveryId,
   });
 
   final String id;
@@ -19,6 +20,7 @@ class Payment {
   final double totalVolumeLiters;
   final double totalAmount;
   final String status;
+  final String? deliveryId;
 
   Payment copyWith({
     String? status,
@@ -31,6 +33,7 @@ class Payment {
       totalVolumeLiters: totalVolumeLiters,
       totalAmount: totalAmount,
       status: status ?? this.status,
+      deliveryId: deliveryId,
     );
   }
 
@@ -42,6 +45,7 @@ class Payment {
         'totalVolumeLiters': totalVolumeLiters,
         'totalAmount': totalAmount,
         'status': status,
+        'deliveryId': deliveryId,
       };
 
   factory Payment.fromJson(Map<String, dynamic> json) {
@@ -64,6 +68,7 @@ class Payment {
       totalVolumeLiters: (json['totalVolumeLiters'] as num).toDouble(),
       totalAmount: (json['totalAmount'] as num).toDouble(),
       status: json['status'] as String,
+      deliveryId: json['deliveryId'] as String?,
     );
   }
 }

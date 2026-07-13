@@ -232,11 +232,7 @@ class _DeliveriesScreenState extends State<DeliveriesScreen> {
                     label: 'Volume',
                     value: '${delivery.volumeLiters.toStringAsFixed(1)} L',
                   ),
-                  _DetailGridItem(
-                    icon: Icons.scale_rounded,
-                    label: 'Weight',
-                    value: '${delivery.weightKg.toStringAsFixed(1)} kg',
-                  ),
+
                   _DetailGridItem(
                     icon: Icons.info_outline_rounded,
                     label: 'Status',

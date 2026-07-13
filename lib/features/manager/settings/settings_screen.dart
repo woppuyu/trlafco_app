@@ -72,26 +72,6 @@ class SettingsScreen extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 14),
-
-          // ── App info section ──────────────────────────────────────────
-          _SettingsSection(
-            title: 'About',
-            children: [
-              _SettingsTile(
-                icon: Icons.info_outline_rounded,
-                iconColor: const Color(0xFF0EA5E9),
-                title: 'TRLAFCO Supply Mobile',
-                subtitle: 'v0.1  ·  Academic Flutter Project',
-              ),
-              _SettingsTile(
-                icon: Icons.code_rounded,
-                iconColor: const Color(0xFF16A34A),
-                title: 'Tech Stack',
-                subtitle: 'Flutter · Provider · go_router · SharedPreferences',
-              ),
-            ],
-          ),
           const SizedBox(height: 24),
 
           // ── Logout ────────────────────────────────────────────────────

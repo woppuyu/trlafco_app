@@ -83,6 +83,22 @@ class ManagerDashboardScreen extends StatelessWidget {
                   LineChartData(
                     minY: 1000,
                     maxY: 1400,
+                    lineTouchData: LineTouchData(
+                      touchTooltipData: LineTouchTooltipData(
+                        getTooltipColor: (touchedSpot) => scheme.surfaceContainerHighest,
+                        getTooltipItems: (touchedSpots) {
+                          return touchedSpots.map((spot) {
+                            return LineTooltipItem(
+                              spot.y.toStringAsFixed(1),
+                              TextStyle(
+                                color: scheme.onSurface,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            );
+                          }).toList();
+                        },
+                      ),
+                    ),
                     borderData: FlBorderData(show: false),
                     gridData: FlGridData(
                       show: true,
@@ -145,6 +161,7 @@ class ManagerDashboardScreen extends StatelessWidget {
                             return SideTitleWidget(
                               meta: meta,
                               space: 6,
+                              fitInside: SideTitleFitInsideData.fromTitleMeta(meta),
                               child: Text(
                                 days[value.toInt()],
                                 style: Theme.of(context)
