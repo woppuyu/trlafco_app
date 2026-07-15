@@ -52,13 +52,25 @@ class Delivery {
     return Delivery(
       id: json['id'] as String,
       farmerSupplierId: json['farmerSupplierId'] as String,
-      date: DateTime.parse(json['date'] as String),
+      date: _parseDateTime(json['date']),
       volumeLiters: (json['volumeLiters'] as num).toDouble(),
       classification: json['classification'] as String?,
       status: json['status'] as String,
       paymentPeriodStart: json['paymentPeriodStart'] != null
-          ? DateTime.parse(json['paymentPeriodStart'] as String)
+          ? _parseDateTime(json['paymentPeriodStart'])
           : null,
     );
   }
+}
+
+DateTime _parseDateTime(dynamic val) {
+  if (val == null) return DateTime.now();
+  if (val is DateTime) return val;
+  if (val is String) {
+    return DateTime.tryParse(val) ?? DateTime.now();
+  }
+  try {
+    return (val as dynamic).toDate() as DateTime;
+  } catch (_) {}
+  return DateTime.tryParse(val.toString()) ?? DateTime.now();
 }
