@@ -34,7 +34,7 @@ class FirebaseService {
       );
     } on FirebaseAuthException catch (e) {
       // If user does not exist, auto-register them to simplify initial setup
-      if (e.code == 'user-not-found' || e.code == 'invalid-credential' || e.code == 'wrong-password') {
+      if (e.code == 'user-not-found') {
         try {
           final creds = await _auth.createUserWithEmailAndPassword(
             email: email,
