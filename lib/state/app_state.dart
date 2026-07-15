@@ -131,8 +131,14 @@ class AppState extends ChangeNotifier {
     try {
       final creds = await firebaseService.login(username: username, password: password);
       if (creds != null) {
-        currentUsername = username.trim().toLowerCase();
-        currentRole = currentUsername == 'manager' ? UserRole.manager : UserRole.logistics;
+        final fbUser = creds.user;
+        currentUsername = fbUser?.email?.split('@').first ?? username.trim().toLowerCase();
+        final role = fbUser == null ? null : await firebaseService.getUserRole(fbUser.uid);
+        currentRole = role == 'manager'
+            ? UserRole.manager
+            : role == 'logistics'
+                ? UserRole.logistics
+                : null;
         authError = null;
         notifyListeners();
         return true;
