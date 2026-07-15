@@ -49,26 +49,27 @@ class Payment {
       };
 
   factory Payment.fromJson(Map<String, dynamic> json) {
-    // Safe migration: if periodStart is absent (old data), default to DateTime.now()
-    // so existing records don't crash. They will be re-seeded on next fresh install.
-    DateTime parsedPeriodStart;
-    try {
-      parsedPeriodStart = json['periodStart'] != null
-          ? DateTime.parse(json['periodStart'] as String)
-          : DateTime.now();
-    } catch (_) {
-      parsedPeriodStart = DateTime.now();
-    }
-
     return Payment(
       id: json['id'] as String,
       farmerSupplierId: json['farmerSupplierId'] as String,
       periodLabel: json['periodLabel'] as String,
-      periodStart: parsedPeriodStart,
+      periodStart: _parseDateTime(json['periodStart']),
       totalVolumeLiters: (json['totalVolumeLiters'] as num).toDouble(),
       totalAmount: (json['totalAmount'] as num).toDouble(),
       status: json['status'] as String,
       deliveryId: json['deliveryId'] as String?,
     );
   }
+}
+
+DateTime _parseDateTime(dynamic val) {
+  if (val == null) return DateTime.now();
+  if (val is DateTime) return val;
+  if (val is String) {
+    return DateTime.parse(val);
+  }
+  try {
+    return (val as dynamic).toDate() as DateTime;
+  } catch (_) {}
+  return DateTime.tryParse(val.toString()) ?? DateTime.now();
 }

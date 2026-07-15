@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/material.dart';
 import 'package:trlafco_app/models/delivery.dart';
 import 'package:trlafco_app/models/farmer_supplier.dart';
@@ -6,13 +8,15 @@ import 'package:trlafco_app/models/payment.dart';
 import 'package:trlafco_app/models/product.dart';
 import 'package:trlafco_app/models/user_role.dart';
 import 'package:trlafco_app/services/local_storage_service.dart';
-import 'package:trlafco_app/services/seed_data.dart';
+import 'package:trlafco_app/services/firebase_service.dart';
 
 /// Centralized application state for auth, settings, and business data.
 class AppState extends ChangeNotifier {
-  AppState({required this.storage});
+  AppState({required this.storage, FirebaseService? firebase})
+      : firebaseService = firebase ?? FirebaseService();
 
   final LocalStorageService storage;
+  final FirebaseService firebaseService;
 
   bool isLoading = true;
   ThemeMode themeMode = ThemeMode.light;
@@ -26,48 +30,91 @@ class AppState extends ChangeNotifier {
   List<FinishedProductInventory> inventory = [];
   List<Payment> payments = [];
 
+  final List<StreamSubscription> _subscriptions = [];
+
   // ─── Initialization ───────────────────────────────────────────────────────
 
   Future<void> initialize() async {
     isLoading = true;
     notifyListeners();
 
+    // Cancel old subscriptions if initialized multiple times
+    for (final sub in _subscriptions) {
+      sub.cancel();
+    }
+    _subscriptions.clear();
+
+    // Listen to Firebase Auth state changes
+    _subscriptions.add(
+      firebaseService.authStateChanges.listen((fb.User? fbUser) async {
+        if (fbUser != null) {
+          currentUsername = fbUser.email?.split('@').first;
+          final role = await firebaseService.getUserRole(fbUser.uid);
+          if (role == 'manager') {
+            currentRole = UserRole.manager;
+          } else if (role == 'logistics') {
+            currentRole = UserRole.logistics;
+          }
+        } else {
+          currentRole = null;
+          currentUsername = null;
+        }
+        notifyListeners();
+      }),
+    );
+
+    // Listen to Firestore real-time streams
+    _subscriptions.add(
+      firebaseService.farmersStream.listen((list) {
+        farmers = list;
+        notifyListeners();
+      }),
+    );
+
+    _subscriptions.add(
+      firebaseService.deliveriesStream.listen((list) {
+        deliveries = list;
+        notifyListeners();
+      }),
+    );
+
+    _subscriptions.add(
+      firebaseService.productsStream.listen((list) {
+        products = list;
+        notifyListeners();
+      }),
+    );
+
+    _subscriptions.add(
+      firebaseService.inventoryStream.listen((list) {
+        inventory = list;
+        notifyListeners();
+      }),
+    );
+
+    _subscriptions.add(
+      firebaseService.paymentsStream.listen((list) {
+        payments = list;
+        notifyListeners();
+      }),
+    );
+
     final savedTheme = await storage.loadThemeMode();
     if (savedTheme == 'dark') {
       themeMode = ThemeMode.dark;
     }
 
-    // Restore persisted session so user stays logged in after restart.
-    final (savedRole, savedUsername) = await storage.loadSession();
-    if (savedRole == 'manager') {
-      currentRole = UserRole.manager;
-      currentUsername = savedUsername;
-    } else if (savedRole == 'logistics') {
-      currentRole = UserRole.logistics;
-      currentUsername = savedUsername;
-    }
-
-    farmers = await storage.loadFarmers();
-    deliveries = await storage.loadDeliveries();
-    products = await storage.loadProducts();
-    inventory = await storage.loadInventory();
-    payments = await storage.loadPayments();
-
-    if (farmers.isEmpty &&
-        deliveries.isEmpty &&
-        products.isEmpty &&
-        inventory.isEmpty &&
-        payments.isEmpty) {
-      farmers = SeedData.farmers();
-      deliveries = SeedData.deliveries();
-      products = SeedData.products();
-      inventory = SeedData.inventory();
-      payments = SeedData.payments();
-      await _persistData();
-    }
 
     isLoading = false;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    for (final sub in _subscriptions) {
+      sub.cancel();
+    }
+    super.dispose();
   }
 
   // ─── Auth ─────────────────────────────────────────────────────────────────
@@ -79,27 +126,25 @@ class AppState extends ChangeNotifier {
     authError = null;
     notifyListeners();
 
-    await Future<void>.delayed(const Duration(milliseconds: 900));
-
-    if (username == 'manager' && password == 'manager123') {
-      currentRole = UserRole.manager;
-      currentUsername = username;
-      authError = null;
-      await storage.saveSession('manager', username);
-      notifyListeners();
-      return true;
+    try {
+      final creds = await firebaseService.login(username: username, password: password);
+      if (creds != null) {
+        currentUsername = username.trim().toLowerCase();
+        currentRole = currentUsername == 'manager' ? UserRole.manager : UserRole.logistics;
+        authError = null;
+        notifyListeners();
+        return true;
+      }
+    } on fb.FirebaseAuthException catch (e) {
+      if (e.code == 'wrong-password' || e.code == 'invalid-credential' || e.code == 'user-not-found') {
+        authError = 'Invalid username or password. Please try again.';
+      } else {
+        authError = e.message ?? 'Authentication failed. Please try again.';
+      }
+    } catch (_) {
+      authError = 'Invalid username or password. Please try again.';
     }
 
-    if (username == 'logistics' && password == 'logistics123') {
-      currentRole = UserRole.logistics;
-      currentUsername = username;
-      authError = null;
-      await storage.saveSession('logistics', username);
-      notifyListeners();
-      return true;
-    }
-
-    authError = 'Invalid username or password. Please try again.';
     notifyListeners();
     return false;
   }
@@ -108,7 +153,7 @@ class AppState extends ChangeNotifier {
     currentRole = null;
     currentUsername = null;
     authError = null;
-    await storage.clearSession();
+    await firebaseService.logout();
     notifyListeners();
   }
 
@@ -145,29 +190,21 @@ class AppState extends ChangeNotifier {
   // ─── Farmer-Supplier CRUD ─────────────────────────────────────────────────
 
   Future<void> addFarmerSupplier(FarmerSupplier farmer) async {
-    farmers = [farmer, ...farmers];
-    await storage.saveFarmers(farmers);
-    notifyListeners();
+    await firebaseService.saveFarmer(farmer);
   }
 
   Future<void> updateFarmerSupplier(FarmerSupplier updated) async {
-    farmers = farmers.map((f) => f.id == updated.id ? updated : f).toList();
-    await storage.saveFarmers(farmers);
-    notifyListeners();
+    await firebaseService.saveFarmer(updated);
   }
 
   Future<void> deleteFarmerSupplier(String id) async {
-    farmers = farmers.where((f) => f.id != id).toList();
-    await storage.saveFarmers(farmers);
-    notifyListeners();
+    await firebaseService.deleteFarmer(id);
   }
 
   // ─── Delivery CRUD ────────────────────────────────────────────────────────
 
   Future<void> addDelivery(Delivery delivery) async {
-    deliveries = [delivery, ...deliveries];
-    await storage.saveDeliveries(deliveries);
-    notifyListeners();
+    await firebaseService.saveDelivery(delivery);
   }
 
   Future<void> updateDelivery(Delivery updated) async {
@@ -182,32 +219,23 @@ class AppState extends ChangeNotifier {
       resolved = updated.copyWith(paymentPeriodStart: null);
     }
 
-    deliveries =
-        deliveries.map((d) => d.id == resolved.id ? resolved : d).toList();
+    await firebaseService.saveDelivery(resolved);
 
     final oldPeriodStart = old.paymentPeriodStart ?? old.date;
-    _syncPaymentForFarmerAndPeriod(old.farmerSupplierId, oldPeriodStart);
+    await _syncPaymentForFarmerAndPeriod(old.farmerSupplierId, oldPeriodStart);
 
     final newPeriodStart = resolved.paymentPeriodStart ?? resolved.date;
     if (old.farmerSupplierId != resolved.farmerSupplierId || oldPeriodStart != newPeriodStart) {
-      _syncPaymentForFarmerAndPeriod(resolved.farmerSupplierId, newPeriodStart);
+      await _syncPaymentForFarmerAndPeriod(resolved.farmerSupplierId, newPeriodStart);
     }
-
-    await storage.saveDeliveries(deliveries);
-    await storage.savePayments(payments);
-    notifyListeners();
   }
 
   Future<void> deleteDelivery(String id) async {
     final old = deliveries.firstWhere((d) => d.id == id);
-    deliveries = deliveries.where((d) => d.id != id).toList();
+    await firebaseService.deleteDelivery(id);
 
     final oldPeriodStart = old.paymentPeriodStart ?? old.date;
-    _syncPaymentForFarmerAndPeriod(old.farmerSupplierId, oldPeriodStart);
-
-    await storage.saveDeliveries(deliveries);
-    await storage.savePayments(payments);
-    notifyListeners();
+    await _syncPaymentForFarmerAndPeriod(old.farmerSupplierId, oldPeriodStart);
   }
 
   Future<void> classifyDelivery({
@@ -215,44 +243,32 @@ class AppState extends ChangeNotifier {
     required String classification,
   }) async {
     DateTime? resolvedPeriodStart;
-    deliveries = deliveries.map((delivery) {
-      if (delivery.id == deliveryId) {
-        if (classification == 'Class A' || classification == 'Class B') {
-          resolvedPeriodStart = _getPaymentPeriodStart(delivery.farmerSupplierId, delivery.date);
-        } else {
-          resolvedPeriodStart = null;
-        }
-        return delivery.copyWith(
-          classification: classification,
-          status: 'classified',
-          paymentPeriodStart: resolvedPeriodStart,
-        );
-      }
-      return delivery;
-    }).toList();
-
-    // Sync payments based on classification
     final delivery = deliveries.firstWhere((d) => d.id == deliveryId);
-    final periodStart = delivery.paymentPeriodStart ?? delivery.date;
-    _syncPaymentForFarmerAndPeriod(delivery.farmerSupplierId, periodStart);
 
-    await storage.saveDeliveries(deliveries);
-    await storage.savePayments(payments);
-    notifyListeners();
+    if (classification == 'Class A' || classification == 'Class B') {
+      resolvedPeriodStart = _getPaymentPeriodStart(delivery.farmerSupplierId, delivery.date);
+    } else {
+      resolvedPeriodStart = null;
+    }
+
+    final updated = delivery.copyWith(
+      classification: classification,
+      status: 'classified',
+      paymentPeriodStart: resolvedPeriodStart,
+    );
+
+    await firebaseService.saveDelivery(updated);
+
+    final periodStart = updated.paymentPeriodStart ?? updated.date;
+    await _syncPaymentForFarmerAndPeriod(updated.farmerSupplierId, periodStart);
   }
 
   // ─── Payment operations ───────────────────────────────────────────────────
 
   Future<void> markPaymentPaid(String paymentId) async {
-    payments = payments.map((payment) {
-      if (payment.id == paymentId) {
-        return payment.copyWith(status: 'paid');
-      }
-      return payment;
-    }).toList();
-
-    await storage.savePayments(payments);
-    notifyListeners();
+    final payment = payments.firstWhere((p) => p.id == paymentId);
+    final updated = payment.copyWith(status: 'paid');
+    await firebaseService.savePayment(updated);
   }
 
   // ─── Refresh ──────────────────────────────────────────────────────────────
@@ -276,19 +292,19 @@ class AppState extends ChangeNotifier {
     return deliveries
         .where((e) =>
             e.classification == 'Class A' || e.classification == 'Class B')
-        .fold(0, (sum, e) => sum + e.volumeLiters);
+        .fold(0, (total, e) => total + e.volumeLiters);
   }
 
   double get classARawMilkStock {
     return deliveries
         .where((e) => e.classification == 'Class A')
-        .fold(0, (sum, e) => sum + e.volumeLiters);
+        .fold(0, (total, e) => total + e.volumeLiters);
   }
 
   double get classBRawMilkStock {
     return deliveries
         .where((e) => e.classification == 'Class B')
-        .fold(0, (sum, e) => sum + e.volumeLiters);
+        .fold(0, (total, e) => total + e.volumeLiters);
   }
 
   /// Total payout amount for the current calendar month only.
@@ -300,11 +316,11 @@ class AppState extends ChangeNotifier {
               e.periodStart.year == now.year &&
               e.periodStart.month == now.month,
         )
-        .fold(0, (sum, e) => sum + e.totalAmount);
+        .fold(0, (total, e) => total + e.totalAmount);
   }
 
   int get pendingOrdersCount {
-    return inventory.fold(0, (sum, e) => sum + e.reservedStock);
+    return inventory.fold(0, (total, e) => total + e.reservedStock);
   }
 
   int get todayDeliveriesCount {
@@ -319,17 +335,7 @@ class AppState extends ChangeNotifier {
 
   // ─── Private helpers ──────────────────────────────────────────────────────
 
-  Future<void> _persistData() async {
-    await Future.wait([
-      storage.saveFarmers(farmers),
-      storage.saveDeliveries(deliveries),
-      storage.saveProducts(products),
-      storage.saveInventory(inventory),
-      storage.savePayments(payments),
-    ]);
-  }
-
-  void _syncPaymentForFarmerAndPeriod(String farmerId, DateTime periodStart) {
+  Future<void> _syncPaymentForFarmerAndPeriod(String farmerId, DateTime periodStart) async {
     final isFirstHalf = periodStart.day <= 15;
     final lastDay = DateTime(periodStart.year, periodStart.month + 1, 0).day;
     final periodEndDay = isFirstHalf ? 15 : lastDay;
@@ -350,7 +356,7 @@ class AppState extends ChangeNotifier {
              dPeriodStart.day == periodStart.day;
     }).toList();
 
-    final totalVolume = periodDeliveries.fold<double>(0.0, (sum, d) => sum + d.volumeLiters);
+    final totalVolume = periodDeliveries.fold<double>(0.0, (acc, d) => acc + d.volumeLiters);
     final totalAmount = totalVolume * 45.0;
 
     final existingIndex = payments.indexWhere((p) =>
@@ -358,9 +364,10 @@ class AppState extends ChangeNotifier {
 
     if (existingIndex != -1) {
       if (totalVolume == 0) {
-        payments.removeAt(existingIndex);
+        final paymentId = payments[existingIndex].id;
+        await firebaseService.deletePayment(paymentId);
       } else {
-        payments[existingIndex] = Payment(
+        final updatedPayment = Payment(
           id: payments[existingIndex].id,
           farmerSupplierId: farmerId,
           periodLabel: periodLabel,
@@ -369,6 +376,7 @@ class AppState extends ChangeNotifier {
           totalAmount: totalAmount,
           status: payments[existingIndex].status,
         );
+        await firebaseService.savePayment(updatedPayment);
       }
     } else if (totalVolume > 0) {
       final now = DateTime.now().microsecondsSinceEpoch;
@@ -381,7 +389,7 @@ class AppState extends ChangeNotifier {
         totalAmount: totalAmount,
         status: 'pending',
       );
-      payments = [newPayment, ...payments];
+      await firebaseService.savePayment(newPayment);
     }
   }
 

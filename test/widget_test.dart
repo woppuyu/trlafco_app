@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -11,16 +14,216 @@ import 'package:trlafco_app/models/delivery.dart';
 import 'package:trlafco_app/models/farmer_supplier.dart';
 import 'package:trlafco_app/models/payment.dart';
 import 'package:trlafco_app/services/local_storage_service.dart';
+import 'package:trlafco_app/services/firebase_service.dart';
 import 'package:trlafco_app/state/app_state.dart';
-
 import 'package:trlafco_app/models/user_role.dart';
+import 'package:trlafco_app/models/finished_product_inventory.dart';
+import 'package:trlafco_app/models/product.dart';
+
+// ─── Firebase Mocks ────────────────────────────────────────────────────────
+
+class FakedUser implements fb.User {
+  FakedUser({this.email = 'mock-user@trlafco.com'});
+
+  @override
+  final String? email;
+
+  @override
+  String get uid => 'mock-uid';
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => null;
+}
+
+class FakedUserCredential implements fb.UserCredential {
+  @override
+  fb.User? get user => FakedUser();
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => null;
+}
+
+class MockFirebaseService implements FirebaseService {
+  final List<FarmerSupplier> _farmers = [];
+  final List<Delivery> _deliveries = [];
+  final List<Product> _products = [];
+  final List<FinishedProductInventory> _inventory = [];
+  final List<Payment> _payments = [];
+
+  late final StreamController<fb.User?> _authController;
+  late final StreamController<List<FarmerSupplier>> _farmersController;
+  late final StreamController<List<Delivery>> _deliveriesController;
+  late final StreamController<List<Product>> _productsController;
+  late final StreamController<List<FinishedProductInventory>> _inventoryController;
+  late final StreamController<List<Payment>> _paymentsController;
+
+  MockFirebaseService() {
+    _authController = StreamController<fb.User?>.broadcast(sync: true);
+    _farmersController = StreamController<List<FarmerSupplier>>.broadcast(
+      sync: true,
+      onListen: () => _farmersController.add(List.from(_farmers)),
+    );
+    _deliveriesController = StreamController<List<Delivery>>.broadcast(
+      sync: true,
+      onListen: () => _deliveriesController.add(List.from(_deliveries)),
+    );
+    _productsController = StreamController<List<Product>>.broadcast(
+      sync: true,
+      onListen: () => _productsController.add(List.from(_products)),
+    );
+    _inventoryController = StreamController<List<FinishedProductInventory>>.broadcast(
+      sync: true,
+      onListen: () => _inventoryController.add(List.from(_inventory)),
+    );
+    _paymentsController = StreamController<List<Payment>>.broadcast(
+      sync: true,
+      onListen: () => _paymentsController.add(List.from(_payments)),
+    );
+  }
+
+  @override
+  fb.User? get currentUser => null;
+
+  @override
+  Stream<fb.User?> get authStateChanges => _authController.stream;
+
+  @override
+  Stream<List<FarmerSupplier>> get farmersStream => _farmersController.stream;
+  @override
+  Stream<List<Delivery>> get deliveriesStream => _deliveriesController.stream;
+  @override
+  Stream<List<Product>> get productsStream => _productsController.stream;
+  @override
+  Stream<List<FinishedProductInventory>> get inventoryStream => _inventoryController.stream;
+  @override
+  Stream<List<Payment>> get paymentsStream => _paymentsController.stream;
+
+  @override
+  Future<fb.UserCredential?> login({required String username, required String password}) async {
+    if ((username == 'manager' && password == 'manager123') ||
+        (username == 'logistics' && password == 'logistics123')) {
+      _authController.add(FakedUser(email: '$username@trlafco.com'));
+      return FakedUserCredential();
+    }
+    throw fb.FirebaseAuthException(code: 'wrong-password', message: 'Invalid credentials');
+  }
+
+  @override
+  Future<void> logout() async {
+    _authController.add(null);
+  }
+
+  @override
+  Future<String?> getUserRole(String uid) async {
+    return uid == 'mock-uid' ? 'manager' : 'logistics';
+  }
+
+  @override
+  Future<void> saveFarmer(FarmerSupplier farmer) async {
+    final idx = _farmers.indexWhere((f) => f.id == farmer.id);
+    if (idx != -1) {
+      _farmers[idx] = farmer;
+    } else {
+      _farmers.add(farmer);
+    }
+    _farmersController.add(List.from(_farmers));
+  }
+
+  @override
+  Future<void> deleteFarmer(String id) async {
+    _farmers.removeWhere((f) => f.id == id);
+    _farmersController.add(List.from(_farmers));
+  }
+
+  @override
+  Future<void> saveDelivery(Delivery delivery) async {
+    final idx = _deliveries.indexWhere((d) => d.id == delivery.id);
+    if (idx != -1) {
+      _deliveries[idx] = delivery;
+    } else {
+      _deliveries.add(delivery);
+    }
+    _deliveriesController.add(List.from(_deliveries));
+  }
+
+  @override
+  Future<void> deleteDelivery(String id) async {
+    _deliveries.removeWhere((d) => d.id == id);
+    _deliveriesController.add(List.from(_deliveries));
+  }
+
+  @override
+  Future<void> saveProduct(Product product) async {
+    final idx = _products.indexWhere((p) => p.id == product.id);
+    if (idx != -1) {
+      _products[idx] = product;
+    } else {
+      _products.add(product);
+    }
+    _productsController.add(List.from(_products));
+  }
+
+  @override
+  Future<void> saveInventoryItem(FinishedProductInventory item) async {
+    final idx = _inventory.indexWhere((i) => i.productId == item.productId);
+    if (idx != -1) {
+      _inventory[idx] = item;
+    } else {
+      _inventory.add(item);
+    }
+    _inventoryController.add(List.from(_inventory));
+  }
+
+  @override
+  Future<void> savePayment(Payment payment) async {
+    final idx = _payments.indexWhere((p) => p.id == payment.id);
+    if (idx != -1) {
+      _payments[idx] = payment;
+    } else {
+      _payments.add(payment);
+    }
+    _paymentsController.add(List.from(_payments));
+  }
+
+  @override
+  Future<void> deletePayment(String id) async {
+    _payments.removeWhere((p) => p.id == id);
+    _paymentsController.add(List.from(_payments));
+  }
+
+  @override
+  Future<void> seedDatabase({
+    required List<FarmerSupplier> farmers,
+    required List<Delivery> deliveries,
+    required List<Product> products,
+    required List<FinishedProductInventory> inventory,
+    required List<Payment> payments,
+  }) async {
+    _farmers.addAll(farmers);
+    _deliveries.addAll(deliveries);
+    _products.addAll(products);
+    _inventory.addAll(inventory);
+    _payments.addAll(payments);
+
+    _farmersController.add(List.from(_farmers));
+    _deliveriesController.add(List.from(_deliveries));
+    _productsController.add(List.from(_products));
+    _inventoryController.add(List.from(_inventory));
+    _paymentsController.add(List.from(_payments));
+  }
+}
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 AppState _makeState({List<FarmerSupplier>? farmers, List<Delivery>? deliveries}) {
-  final state = AppState(storage: LocalStorageService());
-  if (farmers != null) state.farmers = farmers;
-  if (deliveries != null) state.deliveries = deliveries;
+  final mockFb = MockFirebaseService();
+  if (farmers != null) mockFb._farmers.addAll(farmers);
+  if (deliveries != null) mockFb._deliveries.addAll(deliveries);
+  final state = AppState(
+    storage: LocalStorageService(),
+    firebase: mockFb,
+  );
+  state.initialize();
   return state;
 }
 
@@ -50,7 +253,10 @@ void main() {
   // ── Login form ──────────────────────────────────────────────────────────
 
   testWidgets('Login form validates empty fields', (tester) async {
-    final appState = AppState(storage: LocalStorageService());
+    final appState = AppState(
+      storage: LocalStorageService(),
+      firebase: MockFirebaseService(),
+    );
 
     await tester.pumpWidget(
       ChangeNotifierProvider.value(
@@ -72,7 +278,10 @@ void main() {
   });
 
   testWidgets('Wrong credentials show inline auth error', (tester) async {
-    final appState = AppState(storage: LocalStorageService());
+    final appState = AppState(
+      storage: LocalStorageService(),
+      firebase: MockFirebaseService(),
+    );
 
     await tester.pumpWidget(
       ChangeNotifierProvider.value(
@@ -103,7 +312,10 @@ void main() {
   });
 
   testWidgets('Quick Login tab allows logging in by tapping a role card', (tester) async {
-    final appState = AppState(storage: LocalStorageService());
+    final appState = AppState(
+      storage: LocalStorageService(),
+      firebase: MockFirebaseService(),
+    );
 
     await tester.pumpWidget(
       ChangeNotifierProvider.value(
@@ -331,7 +543,7 @@ void main() {
     );
 
     final state = _makeState(deliveries: [delivery]);
-    state.payments = [existingPaidPayment];
+    await state.firebaseService.savePayment(existingPaidPayment);
 
     await state.classifyDelivery(
       deliveryId: 'DL-T1',
@@ -355,19 +567,17 @@ void main() {
   });
 
   test('markPaymentPaid updates payment status', () async {
-    final state = AppState(storage: LocalStorageService());
-    // Inject a payment directly.
-    state.payments = [
-      Payment(
-        id: 'PAY-T1',
-        farmerSupplierId: 'FS-T1',
-        periodLabel: 'Jul 1–15, 2026',
-        periodStart: DateTime(2026, 7, 1),
-        totalVolumeLiters: 500,
-        totalAmount: 22500,
-        status: 'pending',
-      ),
-    ];
+    final state = _makeState();
+    final payment = Payment(
+      id: 'PAY-T1',
+      farmerSupplierId: 'FS-T1',
+      periodLabel: 'Jul 1–15, 2026',
+      periodStart: DateTime(2026, 7, 1),
+      totalVolumeLiters: 500,
+      totalAmount: 22500,
+      status: 'pending',
+    );
+    await state.firebaseService.savePayment(payment);
 
     expect(state.payments.first.status, 'pending');
     await state.markPaymentPaid('PAY-T1');
@@ -375,7 +585,10 @@ void main() {
   });
 
   test('thisMonthPayoutTotal filters by current month only', () {
-    final state = AppState(storage: LocalStorageService());
+    final state = AppState(
+      storage: LocalStorageService(),
+      firebase: MockFirebaseService(),
+    );
     final now = DateTime.now();
 
     state.payments = [
@@ -404,7 +617,10 @@ void main() {
   });
 
   test('toggleTheme changes themeMode', () async {
-    final state = AppState(storage: LocalStorageService());
+    final state = AppState(
+      storage: LocalStorageService(),
+      firebase: MockFirebaseService(),
+    );
     expect(state.themeMode, ThemeMode.light);
     await state.toggleTheme();
     expect(state.themeMode, ThemeMode.dark);
