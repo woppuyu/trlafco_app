@@ -265,6 +265,7 @@ class AppState extends ChangeNotifier {
       paymentPeriodStart: resolvedPeriodStart,
     );
 
+    deliveries = deliveries.map((d) => d.id == deliveryId ? updated : d).toList();
     await firebaseService.saveDelivery(updated);
 
     final periodStart = updated.paymentPeriodStart ?? updated.date;
