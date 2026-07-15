@@ -54,6 +54,8 @@ class AppState extends ChangeNotifier {
             currentRole = UserRole.manager;
           } else if (role == 'logistics') {
             currentRole = UserRole.logistics;
+          } else {
+            currentRole = null;
           }
         } else {
           currentRole = null;
