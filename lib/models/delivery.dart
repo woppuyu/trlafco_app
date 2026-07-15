@@ -67,7 +67,7 @@ DateTime _parseDateTime(dynamic val) {
   if (val == null) return DateTime.now();
   if (val is DateTime) return val;
   if (val is String) {
-    return DateTime.parse(val);
+    return DateTime.tryParse(val) ?? DateTime.now();
   }
   try {
     return (val as dynamic).toDate() as DateTime;
