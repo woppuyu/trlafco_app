@@ -3,10 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:trlafco_app/state/app_state.dart';
 
-/// Login screen with two modes:
-///   1. **Quick-select panel** — click a role card and press Login instantly
-///      (testing convenience, no typing required)
-///   2. **Form login** — classic username/password form toggled via a tab
+/// Login screen with classic credentials form.
+/// Tapping the logo 5 times reveals hidden developer autofill shortcuts at the bottom.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -14,65 +12,21 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen>
-    with SingleTickerProviderStateMixin {
+class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _loading = false;
   bool _obscurePassword = true;
-  late TabController _tabController;
 
-  // Quick-select state
-  String? _quickRole; // 'manager' | 'logistics'
-
-  static const _roles = [
-    _RoleOption(
-      role: 'manager',
-      username: 'manager',
-      password: 'manager123',
-      label: 'Manager',
-      subtitle: 'Dashboard · Records · Analytics',
-      icon: Icons.manage_accounts_rounded,
-      color: Color(0xFF0D5C8F),
-    ),
-    _RoleOption(
-      role: 'logistics',
-      username: 'logistics',
-      password: 'logistics123',
-      label: 'Logistics Staff',
-      subtitle: 'Deliveries · Classification',
-      icon: Icons.local_shipping_rounded,
-      color: Color(0xFF1B8FA8),
-    ),
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-  }
+  // Secret Dev Mode triggers
+  int _logoTaps = 0;
 
   @override
   void dispose() {
     _usernameController.dispose();
     _passwordController.dispose();
-    _tabController.dispose();
     super.dispose();
-  }
-
-  // ─── Actions ──────────────────────────────────────────────────────────────
-
-  Future<void> _quickLogin() async {
-    if (_quickRole == null) return;
-    final option =
-        _roles.firstWhere((r) => r.role == _quickRole);
-    setState(() => _loading = true);
-    await context.read<AppState>().login(
-          username: option.username,
-          password: option.password,
-        );
-    if (mounted) setState(() => _loading = false);
   }
 
   Future<void> _formLogin() async {
@@ -84,8 +38,6 @@ class _LoginScreenState extends State<LoginScreen>
         );
     if (mounted) setState(() => _loading = false);
   }
-
-  // ─── Build ────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -121,7 +73,16 @@ class _LoginScreenState extends State<LoginScreen>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     // ── Header ──────────────────────────────────────────
-                    _Header(scheme: scheme),
+                    _Header(
+                      scheme: scheme,
+                      onLogoTap: () {
+                        _logoTaps++;
+                        if (_logoTaps >= 5) {
+                          context.read<AppState>().toggleDevAutofill();
+                          _logoTaps = 0;
+                        }
+                      },
+                    ),
                     const SizedBox(height: 32),
                     // ── Card ────────────────────────────────────────────
                     Container(
@@ -139,73 +100,24 @@ class _LoginScreenState extends State<LoginScreen>
                           ),
                         ],
                       ),
-                      child: Column(
-                        children: [
-                          // Tab bar
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                            child: TabBar(
-                              controller: _tabController,
-                              dividerColor: Colors.transparent,
-                              indicator: BoxDecoration(
-                                color:
-                                    scheme.primary.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              indicatorSize: TabBarIndicatorSize.tab,
-                              labelStyle: GoogleFonts.inter(
-                                  fontSize: 13, fontWeight: FontWeight.w600),
-                              unselectedLabelStyle: GoogleFonts.inter(
-                                  fontSize: 13, fontWeight: FontWeight.w400),
-                              labelColor: scheme.primary,
-                              unselectedLabelColor: scheme.onSurface
-                                  .withValues(alpha: 0.5),
-                              tabs: const [
-                                Tab(
-                                  icon: Icon(Icons.bolt_rounded, size: 16),
-                                  text: 'Quick Login',
-                                ),
-                                Tab(
-                                  icon: Icon(Icons.lock_outline, size: 16),
-                                  text: 'Credentials',
-                                ),
-                              ],
-                            ),
-                          ),
-                          // Tab content
-                          SizedBox(
-                            height: 320,
-                            child: TabBarView(
-                              controller: _tabController,
-                              physics:
-                                  const NeverScrollableScrollPhysics(),
-                              children: [
-                                _QuickLoginTab(
-                                  roles: _roles,
-                                  selected: _quickRole,
-                                  loading: _loading,
-                                  onSelect: (role) =>
-                                      setState(() => _quickRole = role),
-                                  onLogin: _quickLogin,
-                                ),
-                                _FormLoginTab(
-                                  formKey: _formKey,
-                                  usernameController:
-                                      _usernameController,
-                                  passwordController:
-                                      _passwordController,
-                                  loading: _loading,
-                                  obscurePassword: _obscurePassword,
-                                  authError: appState.authError,
-                                  onToggleObscure: () => setState(
-                                      () => _obscurePassword =
-                                          !_obscurePassword),
-                                  onSubmit: _formLogin,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                      child: _FormLoginTab(
+                        formKey: _formKey,
+                        usernameController: _usernameController,
+                        passwordController: _passwordController,
+                        loading: _loading,
+                        obscurePassword: _obscurePassword,
+                        authError: appState.authError,
+                        showDevAutofill: appState.showDevAutofill,
+                        onToggleObscure: () => setState(() => _obscurePassword = !_obscurePassword),
+                        onSubmit: _formLogin,
+                        onAutofillManager: () {
+                          _usernameController.text = 'manager';
+                          _passwordController.text = appState.managerPassword;
+                        },
+                        onAutofillLogistics: () {
+                          _usernameController.text = 'logistics';
+                          _passwordController.text = appState.logisticsPassword;
+                        },
                       ),
                     ),
                   ],
@@ -222,33 +134,39 @@ class _LoginScreenState extends State<LoginScreen>
 // ─── Header widget ────────────────────────────────────────────────────────────
 
 class _Header extends StatelessWidget {
-  const _Header({required this.scheme});
+  const _Header({required this.scheme, required this.onLogoTap});
   final ColorScheme scheme;
+  final VoidCallback onLogoTap;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Container(
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [scheme.primary, scheme.secondary],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: scheme.primary.withValues(alpha: 0.3),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
+        GestureDetector(
+          key: const Key('logo_gesture'),
+          onTap: onLogoTap,
+          behavior: HitTestBehavior.opaque,
+          child: Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [scheme.primary, scheme.secondary],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-            ],
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: scheme.primary.withValues(alpha: 0.3),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: const Icon(Icons.local_drink_rounded,
+                size: 28, color: Colors.white),
           ),
-          child: const Icon(Icons.local_drink_rounded,
-              size: 28, color: Colors.white),
         ),
         const SizedBox(height: 16),
         Text(
@@ -274,170 +192,6 @@ class _Header extends StatelessWidget {
   }
 }
 
-// ─── Quick-login tab ──────────────────────────────────────────────────────────
-
-class _QuickLoginTab extends StatelessWidget {
-  const _QuickLoginTab({
-    required this.roles,
-    required this.selected,
-    required this.loading,
-    required this.onSelect,
-    required this.onLogin,
-  });
-
-  final List<_RoleOption> roles;
-  final String? selected;
-  final bool loading;
-  final ValueChanged<String> onSelect;
-  final VoidCallback onLogin;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            'Select your role to sign in',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          const SizedBox(height: 12),
-          ...roles.map((option) {
-            final isSelected = selected == option.role;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _RoleCard(
-                option: option,
-                selected: isSelected,
-                onTap: () => onSelect(option.role),
-              ),
-            );
-          }),
-          const Spacer(),
-          SizedBox(
-            height: 46,
-            child: ElevatedButton.icon(
-              key: const Key('quick_login_button'),
-              onPressed: selected == null || loading ? null : onLogin,
-              icon: loading
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white),
-                    )
-                  : const Icon(Icons.bolt_rounded, size: 18),
-              label: Text(loading ? 'Signing in…' : 'Sign In'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: selected != null
-                    ? (roles
-                        .firstWhere((r) => r.role == selected)
-                        .color)
-                    : scheme.onSurface.withValues(alpha: 0.12),
-                foregroundColor: selected != null
-                    ? Colors.white
-                    : scheme.onSurface.withValues(alpha: 0.4),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RoleCard extends StatelessWidget {
-  const _RoleCard({
-    required this.option,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final _RoleOption option;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeOut,
-      decoration: BoxDecoration(
-        color: selected
-            ? option.color.withValues(alpha: 0.08)
-            : Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: selected
-              ? option.color
-              : Theme.of(context)
-                  .colorScheme
-                  .outlineVariant
-                  .withValues(alpha: 0.5),
-          width: selected ? 2 : 1,
-        ),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(14),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: onTap,
-          child: Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: option.color.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(option.icon,
-                      color: option.color, size: 20),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        option.label,
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: selected
-                              ? option.color
-                              : Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.color,
-                        ),
-                      ),
-                      Text(
-                        option.subtitle,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                ),
-                if (selected)
-                  Icon(Icons.check_circle_rounded,
-                      color: option.color, size: 20),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 // ─── Form-login tab ───────────────────────────────────────────────────────────
 
 class _FormLoginTab extends StatelessWidget {
@@ -448,8 +202,11 @@ class _FormLoginTab extends StatelessWidget {
     required this.loading,
     required this.obscurePassword,
     required this.authError,
+    required this.showDevAutofill,
     required this.onToggleObscure,
     required this.onSubmit,
+    required this.onAutofillManager,
+    required this.onAutofillLogistics,
   });
 
   final GlobalKey<FormState> formKey;
@@ -458,8 +215,11 @@ class _FormLoginTab extends StatelessWidget {
   final bool loading;
   final bool obscurePassword;
   final String? authError;
+  final bool showDevAutofill;
   final VoidCallback onToggleObscure;
   final VoidCallback onSubmit;
+  final VoidCallback onAutofillManager;
+  final VoidCallback onAutofillLogistics;
 
   @override
   Widget build(BuildContext context) {
@@ -549,7 +309,37 @@ class _FormLoginTab extends StatelessWidget {
                 ),
               ),
             ],
-            const Spacer(),
+            if (showDevAutofill) ...[
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      key: const Key('autofill_manager_btn'),
+                      onPressed: onAutofillManager,
+                      icon: const Icon(Icons.manage_accounts_rounded, size: 16),
+                      label: const Text('Manager'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      key: const Key('autofill_logistics_btn'),
+                      onPressed: onAutofillLogistics,
+                      icon: const Icon(Icons.local_shipping_rounded, size: 16),
+                      label: const Text('Logistics'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            const SizedBox(height: 24),
             SizedBox(
               height: 46,
               child: ElevatedButton.icon(
@@ -571,26 +361,4 @@ class _FormLoginTab extends StatelessWidget {
       ),
     );
   }
-}
-
-// ─── Data class ───────────────────────────────────────────────────────────────
-
-class _RoleOption {
-  const _RoleOption({
-    required this.role,
-    required this.username,
-    required this.password,
-    required this.label,
-    required this.subtitle,
-    required this.icon,
-    required this.color,
-  });
-
-  final String role;
-  final String username;
-  final String password;
-  final String label;
-  final String subtitle;
-  final IconData icon;
-  final Color color;
 }

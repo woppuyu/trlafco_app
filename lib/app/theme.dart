@@ -224,27 +224,27 @@ class AppTheme {
         titleMedium: GoogleFonts.inter(
             fontSize: 15,
             fontWeight: FontWeight.w600,
-            color: const Color(0xFFCBD5E1)),
+            color: const Color(0xFFF1F5F9)), // Slate 100 (crisp header)
         titleSmall: GoogleFonts.inter(
             fontSize: 13,
             fontWeight: FontWeight.w500,
-            color: const Color(0xFF94A3B8),
+            color: const Color(0xFFCBD5E1), // Slate 300
             letterSpacing: 0.1),
         bodyLarge: GoogleFonts.inter(
-            fontSize: 15, color: const Color(0xFFCBD5E1)),
+            fontSize: 15, color: const Color(0xFFF8FAFC)), // Slate 50 (bright body)
         bodyMedium: GoogleFonts.inter(
-            fontSize: 13, color: const Color(0xFF94A3B8)),
+            fontSize: 13, color: const Color(0xFFE2EBF3)), // High-contrast details
         bodySmall: GoogleFonts.inter(
-            fontSize: 12, color: const Color(0xFF64748B)),
+            fontSize: 12, color: const Color(0xFFCBD5E1)), // Slate 300 (highly readable minor metadata)
         labelLarge: GoogleFonts.inter(
             fontSize: 13,
             fontWeight: FontWeight.w500,
-            color: const Color(0xFF94A3B8)),
+            color: const Color(0xFFE2EBF3)), // Visible buttons / action labels
         labelSmall: GoogleFonts.inter(
             fontSize: 11,
             fontWeight: FontWeight.w500,
             letterSpacing: 0.4,
-            color: const Color(0xFF64748B)),
+            color: const Color(0xFF94A3B8)), // Slate 400 helper text
       ),
       appBarTheme: AppBarTheme(
         elevation: 0,
@@ -294,9 +294,9 @@ class AppTheme {
           borderSide: const BorderSide(color: Color(0xFFF87171), width: 2),
         ),
         labelStyle:
-            GoogleFonts.inter(fontSize: 13, color: const Color(0xFF64748B)),
+            GoogleFonts.inter(fontSize: 13, color: const Color(0xFF94A3B8)), // Slate 400
         hintStyle:
-            GoogleFonts.inter(fontSize: 13, color: const Color(0xFF475569)),
+            GoogleFonts.inter(fontSize: 13, color: const Color(0xFF64748B)), // Slate 500
         floatingLabelStyle: GoogleFonts.inter(fontSize: 13, color: seed),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -337,7 +337,7 @@ class AppTheme {
         labelStyle: GoogleFonts.inter(
             fontSize: 11,
             fontWeight: FontWeight.w500,
-            color: const Color(0xFF94A3B8)),
+            color: const Color(0xFFCBD5E1)), // Slate 300
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       ),
       navigationBarTheme: NavigationBarThemeData(
@@ -351,7 +351,7 @@ class AppTheme {
           return GoogleFonts.inter(
             fontSize: 11,
             fontWeight: active ? FontWeight.w600 : FontWeight.w400,
-            color: active ? seed : const Color(0xFF475569),
+            color: active ? seed : const Color(0xFF94A3B8), // Slate 400
           );
         }),
         iconTheme: WidgetStateProperty.resolveWith((states) {
@@ -359,7 +359,7 @@ class AppTheme {
             size: 22,
             color: states.contains(WidgetState.selected)
                 ? seed
-                : const Color(0xFF475569),
+                : const Color(0xFF94A3B8), // Slate 400
           );
         }),
         indicatorColor: seed.withValues(alpha: 0.15),

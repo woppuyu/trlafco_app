@@ -239,21 +239,24 @@ class _PaymentsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isWide = constraints.maxWidth > 720;
-        final crossAxisCount = isWide ? 2 : 1;
-        return GridView.builder(
-          padding: const EdgeInsets.all(12),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            crossAxisSpacing: 8,
-            mainAxisSpacing: 8,
-            childAspectRatio: isWide ? 2.8 : 3.0,
-          ),
-          itemCount: state.payments.length,
-          itemBuilder: (context, index) {
-            final payment = state.payments[index];
+    return RefreshIndicator(
+      onRefresh: state.refreshData,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isWide = constraints.maxWidth > 720;
+          final crossAxisCount = isWide ? 2 : 1;
+          return GridView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(12),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+              childAspectRatio: isWide ? 2.8 : 3.0,
+            ),
+            itemCount: state.payments.length,
+            itemBuilder: (context, index) {
+              final payment = state.payments[index];
             final farmer = state.farmerById(payment.farmerSupplierId);
             return Card(
               child: InkWell(
@@ -348,8 +351,9 @@ class _PaymentsTab extends StatelessWidget {
           },
         );
       },
-    );
-  }
+    ),
+  );
+}
 
   void _showPaymentBreakdown(
     BuildContext context,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:trlafco_app/state/app_state.dart';
+import 'package:go_router/go_router.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -46,6 +47,16 @@ class SettingsScreen extends StatelessWidget {
                     ),
                   ),
                 ),
+              ),
+              _SettingsTile(
+                icon: Icons.lock_outline_rounded,
+                iconColor: scheme.primary,
+                title: 'Change Password',
+                subtitle: 'Update your login password',
+                trailing: Icon(Icons.chevron_right_rounded, color: scheme.onSurface.withValues(alpha: 0.4)),
+                onTap: () {
+                  context.push('/change-password');
+                },
               ),
             ],
           ),
@@ -165,6 +176,7 @@ class _SettingsTile extends StatelessWidget {
     required this.title,
     this.subtitle,
     this.trailing,
+    this.onTap,
   });
 
   final IconData icon;
@@ -172,10 +184,12 @@ class _SettingsTile extends StatelessWidget {
   final String title;
   final String? subtitle;
   final Widget? trailing;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return ListTile(
+      onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
       leading: Container(
         width: 32,

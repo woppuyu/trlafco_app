@@ -8,45 +8,66 @@ initializeApp({
 
 const db = getFirestore();
 
+// 1. Farmers definition (consistent IDs)
 const farmers = [
-  { id: 'FS-001', name: 'Rogelio Dela Cruz', barangay: 'San Isidro', contactNumber: '09178214401', status: 'active' },
-  { id: 'FS-002', name: 'Maricel Ventura', barangay: 'Santa Lucia', contactNumber: '09181152760', status: 'active' },
-  { id: 'FS-003', name: 'Joel Manaloto', barangay: 'Poblacion East', contactNumber: '09274451902', status: 'inactive' },
-  { id: 'FS-004', name: 'Lourdes Castillo', barangay: 'Mabini', contactNumber: '09360083142', status: 'active' },
-  { id: 'FS-005', name: 'Henry Quimpo', barangay: 'Malaya', contactNumber: '09192007751', status: 'active' },
-  { id: 'FS-006', name: 'Kristine Ramos', barangay: 'San Vicente', contactNumber: '09655000099', status: 'active' },
-  { id: 'FS-007', name: 'Edgar Pineda', barangay: 'San Jose', contactNumber: '09218812234', status: 'active' },
-  { id: 'FS-008', name: 'Jocelyn Agravante', barangay: 'Baybay', contactNumber: '09168893450', status: 'active' }
+  { id: 'FS-1784421928720001', name: 'Rogelio Dela Cruz', barangay: 'San Isidro', contactNumber: '09178214401', status: 'active' },
+  { id: 'FS-1784421928720002', name: 'Maricel Ventura', barangay: 'Santa Lucia', contactNumber: '09181152760', status: 'active' },
+  { id: 'FS-1784421928720003', name: 'Joel Manaloto', barangay: 'Poblacion East', contactNumber: '09274451902', status: 'inactive' },
+  { id: 'FS-1784421928720004', name: 'Lourdes Castillo', barangay: 'Mabini', contactNumber: '09360083142', status: 'active' },
+  { id: 'FS-1784421928720005', name: 'Henry Quimpo', barangay: 'Malaya', contactNumber: '09192007751', status: 'active' },
+  { id: 'FS-1784421928720006', name: 'Kristine Ramos', barangay: 'San Vicente', contactNumber: '09655000099', status: 'active' },
+  { id: 'FS-1784421928720007', name: 'Edgar Pineda', barangay: 'San Jose', contactNumber: '09218812234', status: 'active' },
+  { id: 'FS-1784421928720008', name: 'Jocelyn Agravante', barangay: 'Baybay', contactNumber: '09168893450', status: 'active' }
 ];
 
-const now = new Date();
-const subtractDays = (days) => {
-  const d = new Date(now);
-  d.setDate(d.getDate() - days);
-  return d;
-};
+// 2. Programmatically generate deliveries from Jan 1, 2026 to July 19, 2026 (>= 50 records)
+const deliveries = [];
+const startDate = new Date(2026, 0, 1); // Jan 1, 2026
+const endDate = new Date(2026, 6, 19);   // Jul 19, 2026
 
-const deliveries = [
-  { id: 'DL-001', farmerSupplierId: 'FS-001', date: subtractDays(0), volumeLiters: 240, classification: 'Class A', status: 'classified' },
-  { id: 'DL-002', farmerSupplierId: 'FS-002', date: subtractDays(0), volumeLiters: 190, classification: null, status: 'pending' },
-  { id: 'DL-003', farmerSupplierId: 'FS-004', date: subtractDays(1), volumeLiters: 215, classification: 'Class B', status: 'classified' },
-  { id: 'DL-004', farmerSupplierId: 'FS-006', date: subtractDays(1), volumeLiters: 180, classification: 'Rejected', status: 'classified' },
-  { id: 'DL-005', farmerSupplierId: 'FS-007', date: subtractDays(2), volumeLiters: 260, classification: 'Class A', status: 'classified' },
-  { id: 'DL-006', farmerSupplierId: 'FS-005', date: subtractDays(2), volumeLiters: 205, classification: null, status: 'pending' },
-  { id: 'DL-007', farmerSupplierId: 'FS-008', date: subtractDays(3), volumeLiters: 172, classification: 'Class B', status: 'classified' },
-  { id: 'DL-008', farmerSupplierId: 'FS-001', date: subtractDays(3), volumeLiters: 229, classification: 'Class A', status: 'classified' },
-  { id: 'DL-009', farmerSupplierId: 'FS-004', date: subtractDays(4), volumeLiters: 199, classification: null, status: 'pending' },
-  { id: 'DL-010', farmerSupplierId: 'FS-002', date: subtractDays(4), volumeLiters: 188, classification: 'Class B', status: 'classified' },
-  { id: 'DL-011', farmerSupplierId: 'FS-007', date: subtractDays(5), volumeLiters: 250, classification: 'Class A', status: 'classified' },
-  { id: 'DL-012', farmerSupplierId: 'FS-006', date: subtractDays(5), volumeLiters: 166, classification: null, status: 'pending' },
-  { id: 'DL-013', farmerSupplierId: 'FS-005', date: subtractDays(6), volumeLiters: 221, classification: 'Class B', status: 'classified' },
-  { id: 'DL-014', farmerSupplierId: 'FS-008', date: subtractDays(6), volumeLiters: 210, classification: 'Class A', status: 'classified' },
-  { id: 'DL-015', farmerSupplierId: 'FS-003', date: subtractDays(7), volumeLiters: 134, classification: 'Rejected', status: 'classified' },
-  { id: 'DL-016', farmerSupplierId: 'FS-002', date: subtractDays(8), volumeLiters: 175, classification: null, status: 'pending' },
-  { id: 'DL-017', farmerSupplierId: 'FS-001', date: subtractDays(9), volumeLiters: 244, classification: 'Class A', status: 'classified' },
-  { id: 'DL-018', farmerSupplierId: 'FS-004', date: subtractDays(10), volumeLiters: 208, classification: 'Class B', status: 'classified' }
-];
+let currentDate = new Date(startDate);
+let deliveryCounter = 1;
+while (currentDate <= endDate) {
+  // Add a delivery on every odd-numbered calendar day to create a realistic sequence
+  if (currentDate.getDate() % 2 !== 0) {
+    const farmerIndex = deliveryCounter % farmers.length;
+    const farmer = farmers[farmerIndex];
+    
+    // Inactive farmers don't deliver
+    if (farmer.status === 'active') {
+      const vol = 120 + (deliveryCounter * 13) % 181; // Deterministic volume: 120 to 300 Liters
+      
+      // Determine classification (approx 80% Class A, 15% Class B, 5% Rejected)
+      let classification = 'Class A';
+      if (deliveryCounter % 20 === 0) {
+        classification = 'Rejected';
+      } else if (deliveryCounter % 6 === 0) {
+        classification = 'Class B';
+      }
+      
+      // Deliveries after July 15, 2026 are pending classification
+      const isPending = currentDate > new Date(2026, 6, 15);
+      
+      const isRejected = classification === 'Rejected';
+      const periodStart = (!isPending && !isRejected) 
+        ? new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() <= 15 ? 1 : 16)
+        : null;
 
+      deliveries.push({
+        id: `DL-178407365347${String(deliveryCounter).padStart(4, '0')}`,
+        farmerSupplierId: farmer.id,
+        date: new Date(currentDate),
+        volumeLiters: vol,
+        classification: isPending ? null : classification,
+        status: isPending ? 'pending' : 'classified',
+        paymentPeriodStart: periodStart
+      });
+    }
+    deliveryCounter++;
+  }
+  currentDate.setDate(currentDate.getDate() + 1);
+}
+// 3. Products & Inventory definitions
 const products = [
   { id: 'PR-001', name: 'Fresh Milk 1L', category: 'Dairy', requiresMilk: true, sellingPrice: 95 },
   { id: 'PR-002', name: 'Chocolate Milk 330ml', category: 'Dairy', requiresMilk: true, sellingPrice: 38 },
@@ -65,26 +86,82 @@ const inventory = [
   { productId: 'PR-006', currentStock: 43, reservedStock: 5 }
 ];
 
-const payments = [
-  { id: 'PAY-007', farmerSupplierId: 'FS-001', periodLabel: 'Jul 1–15, 2026', periodStart: new Date(2026, 6, 1), totalVolumeLiters: 713, totalAmount: 32085, status: 'pending' },
-  { id: 'PAY-008', farmerSupplierId: 'FS-002', periodLabel: 'Jul 1–15, 2026', periodStart: new Date(2026, 6, 1), totalVolumeLiters: 553, totalAmount: 24885, status: 'pending' },
-  { id: 'PAY-009', farmerSupplierId: 'FS-004', periodLabel: 'Jul 1–15, 2026', periodStart: new Date(2026, 6, 1), totalVolumeLiters: 622, totalAmount: 27990, status: 'pending' },
-  { id: 'PAY-010', farmerSupplierId: 'FS-007', periodLabel: 'Jul 1–15, 2026', periodStart: new Date(2026, 6, 1), totalVolumeLiters: 510, totalAmount: 22950, status: 'paid' },
-  { id: 'PAY-001', farmerSupplierId: 'FS-001', periodLabel: 'May 1–15, 2026', periodStart: new Date(2026, 4, 1), totalVolumeLiters: 1330, totalAmount: 59850, status: 'paid' },
-  { id: 'PAY-002', farmerSupplierId: 'FS-002', periodLabel: 'May 1–15, 2026', periodStart: new Date(2026, 4, 1), totalVolumeLiters: 1165, totalAmount: 51945, status: 'paid' },
-  { id: 'PAY-003', farmerSupplierId: 'FS-004', periodLabel: 'May 1–15, 2026', periodStart: new Date(2026, 4, 1), totalVolumeLiters: 1208, totalAmount: 54510, status: 'paid' },
-  { id: 'PAY-004', farmerSupplierId: 'FS-005', periodLabel: 'May 16–31, 2026', periodStart: new Date(2026, 4, 16), totalVolumeLiters: 980, totalAmount: 44100, status: 'paid' },
-  { id: 'PAY-005', farmerSupplierId: 'FS-006', periodLabel: 'May 16–31, 2026', periodStart: new Date(2026, 4, 16), totalVolumeLiters: 905, totalAmount: 40725, status: 'paid' },
-  { id: 'PAY-006', farmerSupplierId: 'FS-007', periodLabel: 'May 16–31, 2026', periodStart: new Date(2026, 4, 16), totalVolumeLiters: 1124, totalAmount: 50580, status: 'paid' }
-];
+// 4. Programmatically aggregate payments based on the generated deliveries
+const payments = [];
+const paymentPeriods = {};
+
+for (const d of deliveries) {
+  if (d.status === 'classified' && d.paymentPeriodStart) {
+    const date = new Date(d.paymentPeriodStart);
+    const isFirstHalf = date.getDate() <= 15;
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    const periodEndDay = isFirstHalf ? 15 : lastDay;
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthAbbr = months[month];
+    const periodLabel = `${monthAbbr} ${isFirstHalf ? 1 : 16}–${periodEndDay}, ${year}`;
+    
+    const key = `${d.farmerSupplierId}_${periodLabel}`;
+    if (!paymentPeriods[key]) {
+      paymentPeriods[key] = {
+        farmerSupplierId: d.farmerSupplierId,
+        periodLabel: periodLabel,
+        periodStart: date,
+        totalVolumeLiters: 0
+      };
+    }
+    paymentPeriods[key].totalVolumeLiters += d.volumeLiters;
+  }
+}
+
+let paymentCounter = 1;
+for (const key in paymentPeriods) {
+  const p = paymentPeriods[key];
+  const totalAmount = p.totalVolumeLiters * 45.0; // 45.0 PHP per Liter rate
+  
+  // Status: Historical periods (January to June) are paid. July periods are pending.
+  const isJuly = p.periodStart.getMonth() === 6; // July index is 6
+  const status = isJuly ? 'pending' : 'paid';
+  
+  payments.push({
+    id: `PAY-178407365347${String(paymentCounter).padStart(4, '0')}`,
+    farmerSupplierId: p.farmerSupplierId,
+    periodLabel: p.periodLabel,
+    periodStart: p.periodStart,
+    totalVolumeLiters: parseFloat(p.totalVolumeLiters.toFixed(1)),
+    totalAmount: parseFloat(totalAmount.toFixed(2)),
+    status: status
+  });
+  paymentCounter++;
+}
+
+async function clearDatabase() {
+  console.log('Clearing existing collections...');
+  const collections = ['farmers', 'deliveries', 'products', 'inventory', 'payments'];
+  for (const collection of collections) {
+    const snapshot = await db.collection(collection).get();
+    if (snapshot.size > 0) {
+      const batch = db.batch();
+      snapshot.docs.forEach((doc) => {
+        batch.delete(doc.ref);
+      });
+      await batch.commit();
+    }
+  }
+  console.log('Collections cleared!');
+}
 
 async function seed() {
+  await clearDatabase();
+
   console.log('Seeding farmers...');
   for (const doc of farmers) {
     await db.collection('farmers').doc(doc.id).set(doc);
   }
 
-  console.log('Seeding deliveries...');
+  console.log(`Seeding ${deliveries.length} deliveries...`);
   for (const doc of deliveries) {
     await db.collection('deliveries').doc(doc.id).set(doc);
   }
@@ -99,12 +176,12 @@ async function seed() {
     await db.collection('inventory').doc(doc.productId).set(doc);
   }
 
-  console.log('Seeding payments...');
+  console.log(`Seeding ${payments.length} payment records...`);
   for (const doc of payments) {
     await db.collection('payments').doc(doc.id).set(doc);
   }
 
-  console.log('Database seeded successfully!');
+  console.log('Database seeded successfully with dynamic data!');
   process.exit(0);
 }
 

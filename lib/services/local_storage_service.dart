@@ -18,7 +18,43 @@ class LocalStorageService {
   static const String _sessionRoleKey = 'session_role';
   static const String _sessionUsernameKey = 'session_username';
 
+  static const String _devAutofillKey = 'dev_autofill';
+  static const String _managerPwdKey = 'dev_pwd_manager';
+  static const String _logisticsPwdKey = 'dev_pwd_logistics';
+
   Future<SharedPreferences> get _prefs async => SharedPreferences.getInstance();
+
+  // ─── Dev Autofill Trigger ────────────────────────────────────────────────
+
+  Future<bool> loadDevAutofill() async {
+    final prefs = await _prefs;
+    return prefs.getBool(_devAutofillKey) ?? false;
+  }
+
+  Future<void> saveDevAutofill(bool show) async {
+    final prefs = await _prefs;
+    await prefs.setBool(_devAutofillKey, show);
+  }
+
+  Future<String> loadManagerPassword() async {
+    final prefs = await _prefs;
+    return prefs.getString(_managerPwdKey) ?? 'manager123';
+  }
+
+  Future<void> saveManagerPassword(String pwd) async {
+    final prefs = await _prefs;
+    await prefs.setString(_managerPwdKey, pwd);
+  }
+
+  Future<String> loadLogisticsPassword() async {
+    final prefs = await _prefs;
+    return prefs.getString(_logisticsPwdKey) ?? 'logistics123';
+  }
+
+  Future<void> saveLogisticsPassword(String pwd) async {
+    final prefs = await _prefs;
+    await prefs.setString(_logisticsPwdKey, pwd);
+  }
 
   // ─── Theme ───────────────────────────────────────────────────────────────
 

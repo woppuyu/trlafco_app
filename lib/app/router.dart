@@ -10,6 +10,7 @@ import 'package:trlafco_app/features/manager/analytics/manager_analytics_screen.
 import 'package:trlafco_app/features/manager/dashboard/manager_dashboard_screen.dart';
 import 'package:trlafco_app/features/manager/records/manager_records_screen.dart';
 import 'package:trlafco_app/features/manager/settings/settings_screen.dart';
+import 'package:trlafco_app/features/manager/settings/change_password_screen.dart';
 import 'package:trlafco_app/features/manager/shell/manager_shell_screen.dart';
 import 'package:trlafco_app/features/shared/screens/loading_screen.dart';
 import 'package:trlafco_app/models/user_role.dart';
@@ -66,6 +67,13 @@ GoRouter createRouter(AppState appState) {
             return FadeTransition(opacity: animation, child: child);
           },
           child: const LoginScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/change-password',
+        pageBuilder: (context, state) => _slidePage(
+          key: state.pageKey,
+          child: const ChangePasswordScreen(),
         ),
       ),
       StatefulShellRoute.indexedStack(

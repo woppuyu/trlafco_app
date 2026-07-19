@@ -114,8 +114,23 @@ class MockFirebaseService implements FirebaseService {
   }
 
   @override
+  Future<void> updatePassword(String oldPassword, String newPassword) async {
+    // Mock update password
+  }
+
+  @override
   Future<String?> getUserRole(String uid) async {
     return uid == 'mock-uid' ? 'manager' : 'logistics';
+  }
+
+  @override
+  Future<void> saveUserRole({
+    required String uid,
+    required String username,
+    required String role,
+    required String email,
+  }) async {
+    // No-op for tests
   }
 
   @override
@@ -266,10 +281,6 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // Select the 'Credentials' tab first
-    await tester.tap(find.text('Credentials'));
-    await tester.pumpAndSettle();
-
     await tester.tap(find.byKey(const Key('login_button')));
     await tester.pumpAndSettle();
 
@@ -291,10 +302,6 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // Select the 'Credentials' tab first
-    await tester.tap(find.text('Credentials'));
-    await tester.pumpAndSettle();
-
     await tester.enterText(find.byKey(const Key('username_field')), 'wrong');
     await tester.enterText(find.byKey(const Key('password_field')), 'wrong');
     await tester.tap(find.byKey(const Key('login_button')));
@@ -311,7 +318,7 @@ void main() {
     );
   });
 
-  testWidgets('Quick Login tab allows logging in by tapping a role card', (tester) async {
+  testWidgets('Tapping the logo 5 times reveals dev autofill buttons and allows login', (tester) async {
     final appState = AppState(
       storage: LocalStorageService(),
       firebase: MockFirebaseService(),
@@ -325,23 +332,37 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // Verify 'Quick Login' button is present
-    final loginButtonFinder = find.byKey(const Key('quick_login_button'));
-    expect(loginButtonFinder, findsOneWidget);
+    // Verify autofill buttons are NOT visible initially
+    expect(find.byKey(const Key('autofill_manager_btn')), findsNothing);
 
-    // Tap the 'Manager' role card.
-    await tester.tap(find.text('Manager'));
+    // Tap the logo gesture detector 5 times
+    final logoFinder = find.byKey(const Key('logo_gesture'));
+    expect(logoFinder, findsOneWidget);
+    for (int i = 0; i < 5; i++) {
+      await tester.tap(logoFinder);
+    }
     await tester.pumpAndSettle();
 
-    // Tap the 'Sign In' quick login button.
-    await tester.tap(loginButtonFinder);
-    await tester.pump(); // start loading
+    // Verify autofill buttons are now visible
+    expect(find.byKey(const Key('autofill_manager_btn')), findsOneWidget);
 
-    // Wait for the 900ms simulated delay.
+    // Tap 'Manager' autofill
+    await tester.tap(find.byKey(const Key('autofill_manager_btn')));
+    await tester.pumpAndSettle();
+
+    // Verify fields populated
+    expect(find.text('manager'), findsOneWidget);
+    expect(find.text('manager123'), findsOneWidget);
+
+    // Tap login button
+    await tester.tap(find.byKey(const Key('login_button')));
+    await tester.pump();
+
+    // Wait for simulated delay
     await tester.pump(const Duration(milliseconds: 1000));
     await tester.pumpAndSettle();
 
-    // Verify it logged in as manager
+    // Verify logged in as manager
     expect(appState.currentRole, UserRole.manager);
   });
 

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:trlafco_app/models/delivery.dart';
 import 'package:trlafco_app/models/farmer_supplier.dart';
@@ -33,8 +34,9 @@ class FirebaseService {
         password: password,
       );
     } on FirebaseAuthException catch (e) {
-      // If user does not exist, auto-register them to simplify initial setup
-      if (e.code == 'user-not-found') {
+      // If user does not exist (or email enumeration protection is active, which
+      // returns 'invalid-credential'), attempt to auto-register them.
+      if (e.code == 'user-not-found' || e.code == 'invalid-credential') {
         try {
           final creds = await _auth.createUserWithEmailAndPassword(
             email: email,
@@ -48,8 +50,14 @@ class FirebaseService {
             'email': email,
           });
           return creds;
+        } on FirebaseAuthException catch (signUpError) {
+          // If sign up fails because the email is already in use, it means
+          // the account already exists and they entered the wrong password.
+          if (signUpError.code == 'email-already-in-use') {
+            throw e; // Throw original invalid-credential exception
+          }
+          rethrow;
         } catch (_) {
-          // Re-throw original or generic auth exception
           rethrow;
         }
       }
@@ -59,6 +67,20 @@ class FirebaseService {
 
   Future<void> logout() async {
     await _auth.signOut();
+  }
+
+  Future<void> updatePassword(String oldPassword, String newPassword) async {
+    final user = _auth.currentUser;
+    if (user != null && user.email != null) {
+      final creds = EmailAuthProvider.credential(
+        email: user.email!,
+        password: oldPassword,
+      );
+      await user.reauthenticateWithCredential(creds);
+      await user.updatePassword(newPassword);
+    } else {
+      throw Exception('No authenticated user found');
+    }
   }
 
   Future<String?> getUserRole(String uid) async {
@@ -71,48 +93,89 @@ class FirebaseService {
     return null;
   }
 
-  // ─── Firestore Streams ────────────────────────────────────────────────────
+  Future<void> saveUserRole({
+    required String uid,
+    required String username,
+    required String role,
+    required String email,
+  }) async {
+    await _firestore.collection('users').doc(uid).set({
+      'username': username,
+      'role': role,
+      'email': email,
+    });
+  }
 
+  // ─── Firestore Streams ────────────────────────────────────────────────────
   Stream<List<FarmerSupplier>> get farmersStream {
     return _firestore.collection('farmers').snapshots().map((snapshot) {
-      return snapshot.docs
-          .map((doc) => FarmerSupplier.fromJson(doc.data()))
-          .toList();
+      final list = <FarmerSupplier>[];
+      for (final doc in snapshot.docs) {
+        try {
+          list.add(FarmerSupplier.fromJson(doc.data()));
+        } catch (e) {
+          debugPrint('Error parsing farmer document ${doc.id}: $e');
+        }
+      }
+      return list;
     });
   }
 
   Stream<List<Delivery>> get deliveriesStream {
     return _firestore.collection('deliveries').snapshots().map((snapshot) {
-      return snapshot.docs
-          .map((doc) => Delivery.fromJson(doc.data()))
-          .toList();
+      final list = <Delivery>[];
+      for (final doc in snapshot.docs) {
+        try {
+          list.add(Delivery.fromJson(doc.data()));
+        } catch (e) {
+          debugPrint('Error parsing delivery document ${doc.id}: $e');
+        }
+      }
+      return list;
     });
   }
 
   Stream<List<Product>> get productsStream {
     return _firestore.collection('products').snapshots().map((snapshot) {
-      return snapshot.docs
-          .map((doc) => Product.fromJson(doc.data()))
-          .toList();
+      final list = <Product>[];
+      for (final doc in snapshot.docs) {
+        try {
+          list.add(Product.fromJson(doc.data()));
+        } catch (e) {
+          debugPrint('Error parsing product document ${doc.id}: $e');
+        }
+      }
+      return list;
     });
   }
 
   Stream<List<FinishedProductInventory>> get inventoryStream {
     return _firestore.collection('inventory').snapshots().map((snapshot) {
-      return snapshot.docs
-          .map((doc) => FinishedProductInventory.fromJson(doc.data()))
-          .toList();
+      final list = <FinishedProductInventory>[];
+      for (final doc in snapshot.docs) {
+        try {
+          list.add(FinishedProductInventory.fromJson(doc.data()));
+        } catch (e) {
+          debugPrint('Error parsing inventory document ${doc.id}: $e');
+        }
+      }
+      return list;
     });
   }
 
   Stream<List<Payment>> get paymentsStream {
     return _firestore.collection('payments').snapshots().map((snapshot) {
-      return snapshot.docs
-          .map((doc) => Payment.fromJson(doc.data()))
-          .toList();
+      final list = <Payment>[];
+      for (final doc in snapshot.docs) {
+        try {
+          list.add(Payment.fromJson(doc.data()));
+        } catch (e) {
+          debugPrint('Error parsing payment document ${doc.id}: $e');
+        }
+      }
+      return list;
     });
   }
-
   // ─── Firestore CRUD ───────────────────────────────────────────────────────
 
   // Farmer CRUD

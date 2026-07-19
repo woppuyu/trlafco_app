@@ -23,6 +23,9 @@ class AppState extends ChangeNotifier {
   UserRole? currentRole;
   String? currentUsername;
   String? authError;
+  bool showDevAutofill = false;
+  String managerPassword = 'manager123';
+  String logisticsPassword = 'logistics123';
 
   List<FarmerSupplier> farmers = [];
   List<Delivery> deliveries = [];
@@ -96,6 +99,7 @@ class AppState extends ChangeNotifier {
 
     _subscriptions.add(
       firebaseService.paymentsStream.listen((list) {
+        list.sort((a, b) => b.periodStart.compareTo(a.periodStart));
         payments = list;
         notifyListeners();
       }),
@@ -106,8 +110,17 @@ class AppState extends ChangeNotifier {
       themeMode = ThemeMode.dark;
     }
 
+    showDevAutofill = await storage.loadDevAutofill();
+    managerPassword = await storage.loadManagerPassword();
+    logisticsPassword = await storage.loadLogisticsPassword();
 
     isLoading = false;
+    notifyListeners();
+  }
+
+  Future<void> toggleDevAutofill() async {
+    showDevAutofill = !showDevAutofill;
+    await storage.saveDevAutofill(showDevAutofill);
     notifyListeners();
   }
 
@@ -133,7 +146,18 @@ class AppState extends ChangeNotifier {
       if (creds != null) {
         final fbUser = creds.user;
         currentUsername = fbUser?.email?.split('@').first ?? username.trim().toLowerCase();
-        final role = fbUser == null ? null : await firebaseService.getUserRole(fbUser.uid);
+        var role = fbUser == null ? null : await firebaseService.getUserRole(fbUser.uid);
+        
+        if (role == null && fbUser != null) {
+          role = username.trim().toLowerCase() == 'manager' ? 'manager' : 'logistics';
+          await firebaseService.saveUserRole(
+            uid: fbUser.uid,
+            username: username.trim().toLowerCase(),
+            role: role,
+            email: fbUser.email ?? '${username.trim().toLowerCase()}@trlafco.com',
+          );
+        }
+
         currentRole = role == 'manager'
             ? UserRole.manager
             : role == 'logistics'
@@ -162,6 +186,18 @@ class AppState extends ChangeNotifier {
     currentUsername = null;
     authError = null;
     await firebaseService.logout();
+    notifyListeners();
+  }
+
+  Future<void> changePassword(String oldPassword, String newPassword) async {
+    await firebaseService.updatePassword(oldPassword, newPassword);
+    if (currentRole == UserRole.manager) {
+      managerPassword = newPassword;
+      await storage.saveManagerPassword(newPassword);
+    } else if (currentRole == UserRole.logistics) {
+      logisticsPassword = newPassword;
+      await storage.saveLogisticsPassword(newPassword);
+    }
     notifyListeners();
   }
 
@@ -295,7 +331,9 @@ class AppState extends ChangeNotifier {
   }
 
   List<Delivery> get classifiedDeliveries {
-    return deliveries.where((d) => d.status == 'classified').toList();
+    final list = deliveries.where((d) => d.status == 'classified').toList();
+    list.sort((a, b) => b.date.compareTo(a.date));
+    return list;
   }
 
   double get totalRawMilkStock {
