@@ -43,6 +43,7 @@ This application centralizes those records into one system, giving Logistics Sta
 ## 📱 Download & Test the App
 
 If you are testing the app, you can download the latest installable APKs directly from the releases page:
+
 👍 **[Download Latest Test Build (APKs) Here](https://github.com/woppuyu/trlafco_app/releases)**
 
 *Most modern Android phones should use the `trlafco_app-arm64-v8a-release.apk` file.*
