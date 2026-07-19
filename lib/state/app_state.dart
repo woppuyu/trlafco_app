@@ -34,12 +34,107 @@ class AppState extends ChangeNotifier {
   List<Payment> payments = [];
 
   final List<StreamSubscription> _subscriptions = [];
+  final List<StreamSubscription> _streamSubscriptions = [];
+
+  // ─── Initial Data Pre-fetching State ──────────────────────────────────────
+  bool _farmersLoaded = false;
+  bool _deliveriesLoaded = false;
+  bool _productsLoaded = false;
+  bool _inventoryLoaded = false;
+  bool _paymentsLoaded = false;
+  Completer<void>? _dataCompleter;
+
+  bool get hasLoadedInitialData =>
+      _farmersLoaded &&
+      _deliveriesLoaded &&
+      _productsLoaded &&
+      _inventoryLoaded &&
+      _paymentsLoaded;
+
+  Future<void> waitForInitialData() {
+    if (hasLoadedInitialData) return Future.value();
+    _dataCompleter ??= Completer<void>();
+    return _dataCompleter!.future;
+  }
+
+  void _resetInitialDataFlags() {
+    _farmersLoaded = false;
+    _deliveriesLoaded = false;
+    _productsLoaded = false;
+    _inventoryLoaded = false;
+    _paymentsLoaded = false;
+    _dataCompleter = null;
+  }
+
+  void _checkInitialDataComplete() {
+    if (hasLoadedInitialData && _dataCompleter != null && !_dataCompleter!.isCompleted) {
+      _dataCompleter!.complete();
+    }
+  }
 
   // ─── Initialization ───────────────────────────────────────────────────────
+
+  void _subscribeToStreams() {
+    for (final sub in _streamSubscriptions) {
+      sub.cancel();
+    }
+    _streamSubscriptions.clear();
+
+    _streamSubscriptions.add(
+      firebaseService.farmersStream.listen((list) {
+        farmers = list;
+        _farmersLoaded = true;
+        _checkInitialDataComplete();
+        notifyListeners();
+      }),
+    );
+
+    _streamSubscriptions.add(
+      firebaseService.deliveriesStream.listen((list) {
+        deliveries = list;
+        _deliveriesLoaded = true;
+        _checkInitialDataComplete();
+        notifyListeners();
+      }),
+    );
+
+    _streamSubscriptions.add(
+      firebaseService.productsStream.listen((list) {
+        products = list;
+        _productsLoaded = true;
+        _checkInitialDataComplete();
+        notifyListeners();
+      }),
+    );
+
+    _streamSubscriptions.add(
+      firebaseService.inventoryStream.listen((list) {
+        inventory = list;
+        _inventoryLoaded = true;
+        _checkInitialDataComplete();
+        notifyListeners();
+      }),
+    );
+
+    _streamSubscriptions.add(
+      firebaseService.paymentsStream.listen((list) {
+        list.sort((a, b) => b.periodStart.compareTo(a.periodStart));
+        payments = list;
+        _paymentsLoaded = true;
+        _checkInitialDataComplete();
+        notifyListeners();
+      }),
+    );
+  }
 
   Future<void> initialize() async {
     isLoading = true;
     notifyListeners();
+
+    // Synchronously/immediately set up stream subscriptions.
+    // In unit tests, since mock streams are synchronous, this populates
+    // all list data immediately before any async gap.
+    _subscribeToStreams();
 
     // Cancel old subscriptions if initialized multiple times
     for (final sub in _subscriptions) {
@@ -47,7 +142,7 @@ class AppState extends ChangeNotifier {
     }
     _subscriptions.clear();
 
-    // Load local preferences first (fast, no network needed)
+    // Load local preferences first
     final savedTheme = await storage.loadThemeMode();
     if (savedTheme == 'dark') {
       themeMode = ThemeMode.dark;
@@ -56,84 +151,42 @@ class AppState extends ChangeNotifier {
     managerPassword = await storage.loadManagerPassword();
     logisticsPassword = await storage.loadLogisticsPassword();
 
-    // Await the first snapshot from every Firestore stream before marking
-    // initialization as done. This ensures screens always render with data.
-    await Future.wait([
-      firebaseService.farmersStream.first.then((list) {
-        farmers = list;
-      }),
-      firebaseService.deliveriesStream.first.then((list) {
-        deliveries = list;
-      }),
-      firebaseService.productsStream.first.then((list) {
-        products = list;
-      }),
-      firebaseService.inventoryStream.first.then((list) {
-        inventory = list;
-      }),
-      firebaseService.paymentsStream.first.then((list) {
-        list.sort((a, b) => b.periodStart.compareTo(a.periodStart));
-        payments = list;
-      }),
-    ]);
-
-    // Now set up the ongoing live listeners for real-time updates
-    _subscriptions.add(
-      firebaseService.farmersStream.listen((list) {
-        farmers = list;
-        notifyListeners();
-      }),
-    );
-
-    _subscriptions.add(
-      firebaseService.deliveriesStream.listen((list) {
-        deliveries = list;
-        notifyListeners();
-      }),
-    );
-
-    _subscriptions.add(
-      firebaseService.productsStream.listen((list) {
-        products = list;
-        notifyListeners();
-      }),
-    );
-
-    _subscriptions.add(
-      firebaseService.inventoryStream.listen((list) {
-        inventory = list;
-        notifyListeners();
-      }),
-    );
-
-    _subscriptions.add(
-      firebaseService.paymentsStream.listen((list) {
-        list.sort((a, b) => b.periodStart.compareTo(a.periodStart));
-        payments = list;
-        notifyListeners();
-      }),
-    );
-
     // Listen to Firebase Auth state changes
     _subscriptions.add(
-      firebaseService.authStateChanges.listen((fb.User? fbUser) async {
+      firebaseService.authStateChanges.listen((fb.User? fbUser) {
         if (fbUser != null) {
           currentUsername = fbUser.email?.split('@').first;
-          final role = await firebaseService.getUserRole(fbUser.uid);
-          if (role == 'manager') {
-            currentRole = UserRole.manager;
-          } else if (role == 'logistics') {
-            currentRole = UserRole.logistics;
-          } else {
-            currentRole = null;
-          }
+          // Re-subscribe under the new authenticated session
+          _subscribeToStreams();
         } else {
           currentRole = null;
           currentUsername = null;
+          // Clear data on logout
+          farmers = [];
+          deliveries = [];
+          products = [];
+          inventory = [];
+          payments = [];
+          _resetInitialDataFlags();
+          for (final sub in _streamSubscriptions) {
+            sub.cancel();
+          }
+          _streamSubscriptions.clear();
         }
         notifyListeners();
       }),
     );
+
+    // If the user is already authenticated at start, wait for the first snapshots of the streams to load.
+    // Otherwise, end loading immediately to route to /login.
+    final fbUser = firebaseService.currentUser;
+    if (fbUser != null) {
+      try {
+        await waitForInitialData().timeout(const Duration(seconds: 5));
+      } catch (e) {
+        debugPrint('Timeout or error awaiting initial Firestore streams: $e');
+      }
+    }
 
     isLoading = false;
     notifyListeners();
@@ -148,6 +201,9 @@ class AppState extends ChangeNotifier {
   @override
   void dispose() {
     for (final sub in _subscriptions) {
+      sub.cancel();
+    }
+    for (final sub in _streamSubscriptions) {
       sub.cancel();
     }
     super.dispose();
@@ -177,6 +233,19 @@ class AppState extends ChangeNotifier {
             role: role,
             email: fbUser.email ?? '${username.trim().toLowerCase()}@trlafco.com',
           );
+        }
+
+        // Reset and re-subscribe immediately upon successful authentication
+        _resetInitialDataFlags();
+        _subscribeToStreams();
+
+        // Pre-fetch initial Firestore snapshots before showing the dashboard
+        if (fbUser != null) {
+          try {
+            await waitForInitialData().timeout(const Duration(seconds: 5));
+          } catch (e) {
+            debugPrint('Timeout or error awaiting initial Firestore streams during login: $e');
+          }
         }
 
         currentRole = role == 'manager'
