@@ -47,28 +47,37 @@ class AppState extends ChangeNotifier {
     }
     _subscriptions.clear();
 
-    // Listen to Firebase Auth state changes
-    _subscriptions.add(
-      firebaseService.authStateChanges.listen((fb.User? fbUser) async {
-        if (fbUser != null) {
-          currentUsername = fbUser.email?.split('@').first;
-          final role = await firebaseService.getUserRole(fbUser.uid);
-          if (role == 'manager') {
-            currentRole = UserRole.manager;
-          } else if (role == 'logistics') {
-            currentRole = UserRole.logistics;
-          } else {
-            currentRole = null;
-          }
-        } else {
-          currentRole = null;
-          currentUsername = null;
-        }
-        notifyListeners();
-      }),
-    );
+    // Load local preferences first (fast, no network needed)
+    final savedTheme = await storage.loadThemeMode();
+    if (savedTheme == 'dark') {
+      themeMode = ThemeMode.dark;
+    }
+    showDevAutofill = await storage.loadDevAutofill();
+    managerPassword = await storage.loadManagerPassword();
+    logisticsPassword = await storage.loadLogisticsPassword();
 
-    // Listen to Firestore real-time streams
+    // Await the first snapshot from every Firestore stream before marking
+    // initialization as done. This ensures screens always render with data.
+    await Future.wait([
+      firebaseService.farmersStream.first.then((list) {
+        farmers = list;
+      }),
+      firebaseService.deliveriesStream.first.then((list) {
+        deliveries = list;
+      }),
+      firebaseService.productsStream.first.then((list) {
+        products = list;
+      }),
+      firebaseService.inventoryStream.first.then((list) {
+        inventory = list;
+      }),
+      firebaseService.paymentsStream.first.then((list) {
+        list.sort((a, b) => b.periodStart.compareTo(a.periodStart));
+        payments = list;
+      }),
+    ]);
+
+    // Now set up the ongoing live listeners for real-time updates
     _subscriptions.add(
       firebaseService.farmersStream.listen((list) {
         farmers = list;
@@ -105,14 +114,26 @@ class AppState extends ChangeNotifier {
       }),
     );
 
-    final savedTheme = await storage.loadThemeMode();
-    if (savedTheme == 'dark') {
-      themeMode = ThemeMode.dark;
-    }
-
-    showDevAutofill = await storage.loadDevAutofill();
-    managerPassword = await storage.loadManagerPassword();
-    logisticsPassword = await storage.loadLogisticsPassword();
+    // Listen to Firebase Auth state changes
+    _subscriptions.add(
+      firebaseService.authStateChanges.listen((fb.User? fbUser) async {
+        if (fbUser != null) {
+          currentUsername = fbUser.email?.split('@').first;
+          final role = await firebaseService.getUserRole(fbUser.uid);
+          if (role == 'manager') {
+            currentRole = UserRole.manager;
+          } else if (role == 'logistics') {
+            currentRole = UserRole.logistics;
+          } else {
+            currentRole = null;
+          }
+        } else {
+          currentRole = null;
+          currentUsername = null;
+        }
+        notifyListeners();
+      }),
+    );
 
     isLoading = false;
     notifyListeners();
