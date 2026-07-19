@@ -33,9 +33,9 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
     await context.read<AppState>().login(
-          username: _usernameController.text.trim(),
-          password: _passwordController.text.trim(),
-        );
+      username: _usernameController.text.trim(),
+      password: _passwordController.text.trim(),
+    );
     if (mounted) setState(() => _loading = false);
   }
 
@@ -108,7 +108,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         obscurePassword: _obscurePassword,
                         authError: appState.authError,
                         showDevAutofill: appState.showDevAutofill,
-                        onToggleObscure: () => setState(() => _obscurePassword = !_obscurePassword),
+                        onToggleObscure: () => setState(
+                          () => _obscurePassword = !_obscurePassword,
+                        ),
                         onSubmit: _formLogin,
                         onAutofillManager: () {
                           _usernameController.text = 'manager';
@@ -164,8 +166,13 @@ class _Header extends StatelessWidget {
                 ),
               ],
             ),
-            child: const Icon(Icons.local_drink_rounded,
-                size: 28, color: Colors.white),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Image.asset(
+                'assets/images/trlafco_logo.png',
+                fit: BoxFit.cover,
+              ),
+            ),
           ),
         ),
         const SizedBox(height: 16),
@@ -275,25 +282,27 @@ class _FormLoginTab extends StatelessWidget {
               const SizedBox(height: 10),
               Container(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 8),
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .error
-                      .withValues(alpha: 0.08),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.error.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .error
-                        .withValues(alpha: 0.3),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.error.withValues(alpha: 0.3),
                   ),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.error_outline,
-                        color: Theme.of(context).colorScheme.error,
-                        size: 16),
+                    Icon(
+                      Icons.error_outline,
+                      color: Theme.of(context).colorScheme.error,
+                      size: 16,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -350,7 +359,9 @@ class _FormLoginTab extends StatelessWidget {
                         width: 16,
                         height: 16,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       )
                     : const Icon(Icons.login_rounded, size: 18),
                 label: Text(loading ? 'Signing in…' : 'Sign In'),
