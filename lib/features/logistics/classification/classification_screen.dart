@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:trlafco_app/features/shared/widgets/delivery_list_tile.dart';
@@ -14,10 +15,17 @@ class ClassificationScreen extends StatefulWidget {
 
 class _ClassificationScreenState extends State<ClassificationScreen> {
   final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
+  final _searchController = TextEditingController();
 
   /// Local shadow of the pending list so we can animate removals.
   late List<Delivery> _items;
   bool _initialized = false;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   void didChangeDependencies() {
@@ -503,77 +511,134 @@ class _ClassificationScreenState extends State<ClassificationScreen> {
             ),
     );
 
-    final historyView = RefreshIndicator(
-      onRefresh: state.refreshData,
-      child: classifiedItems.isEmpty
-          ? const Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.history_rounded,
-                      size: 56, color: Colors.grey),
-                  SizedBox(height: 12),
-                  Text(
-                    'No classified history yet.',
-                    style: TextStyle(fontSize: 16, color: Colors.grey),
-                  ),
-                ],
-              ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: classifiedItems.length,
-              itemBuilder: (context, index) {
-                final delivery = classifiedItems[index];
-                final farmer = state.farmerById(delivery.farmerSupplierId);
+    final query = _searchController.text.trim().toLowerCase();
+    final filteredHistory = classifiedItems.where((delivery) {
+      final farmer = state.farmerById(delivery.farmerSupplierId);
+      final name = farmer?.name ?? 'Unknown Farmer';
+      return name.toLowerCase().contains(query);
+    }).toList();
 
-                Color badgeColor;
-                if (delivery.classification == 'Class A') {
-                  badgeColor = Colors.green;
-                } else if (delivery.classification == 'Class B') {
-                  badgeColor = Colors.orange;
-                } else {
-                  badgeColor = Colors.red;
-                }
-
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  child: ListTile(
-                    onTap: () => _openReclassifySheet(state, delivery),
-                    leading: CircleAvatar(
-                      backgroundColor: badgeColor.withValues(alpha: 0.1),
-                      child: Icon(
-                        delivery.classification == 'Rejected'
-                            ? Icons.close_rounded
-                            : Icons.check_rounded,
-                        color: badgeColor,
-                      ),
-                    ),
-                    title: Text(farmer?.name ?? 'Unknown Farmer'),
-                    subtitle: Text(
-                      '${DateFormat('MMM d, y').format(delivery.date)} • ${delivery.volumeLiters.toStringAsFixed(0)} L',
-                    ),
-                    trailing: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: badgeColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: badgeColor.withValues(alpha: 0.3)),
-                      ),
-                      child: Text(
-                        delivery.classification ?? 'Unclassified',
-                        style: TextStyle(
-                          color: badgeColor,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
+    final historyView = Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+          child: TextField(
+            key: const Key('history_search_field'),
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Search by farmer name...',
+              prefixIcon: const Icon(Icons.search_rounded),
+              suffixIcon: _searchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear_rounded),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() {});
+                      },
+                    )
+                  : null,
             ),
+            onChanged: (val) {
+              setState(() {});
+            },
+          ),
+        ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: state.refreshData,
+            child: filteredHistory.isEmpty
+                ? SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: Container(
+                      height: MediaQuery.of(context).size.height * 0.5,
+                      alignment: Alignment.center,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.search_off_rounded,
+                            size: 48,
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            _searchController.text.isEmpty
+                                ? 'No classified history yet.'
+                                : 'No history records found',
+                            style: GoogleFonts.inter(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _searchController.text.isEmpty
+                                ? 'Delivered shipments will appear here.'
+                                : 'Try searching for a different farmer name.',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: filteredHistory.length,
+                    itemBuilder: (context, index) {
+                      final delivery = filteredHistory[index];
+                      final farmer = state.farmerById(delivery.farmerSupplierId);
+
+                      Color badgeColor;
+                      if (delivery.classification == 'Class A') {
+                        badgeColor = Colors.green;
+                      } else if (delivery.classification == 'Class B') {
+                        badgeColor = Colors.orange;
+                      } else {
+                        badgeColor = Colors.red;
+                      }
+
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        child: ListTile(
+                          onTap: () => _openReclassifySheet(state, delivery),
+                          leading: CircleAvatar(
+                            backgroundColor: badgeColor.withValues(alpha: 0.1),
+                            child: Icon(
+                              delivery.classification == 'Rejected'
+                                  ? Icons.close_rounded
+                                  : Icons.check_rounded,
+                              color: badgeColor,
+                            ),
+                          ),
+                          title: Text(farmer?.name ?? 'Unknown Farmer'),
+                          subtitle: Text(
+                            '${DateFormat('MMM d, y').format(delivery.date)} • ${delivery.volumeLiters.toStringAsFixed(0)} L',
+                          ),
+                          trailing: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: badgeColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: badgeColor.withValues(alpha: 0.3)),
+                            ),
+                            child: Text(
+                              delivery.classification ?? 'Unclassified',
+                              style: TextStyle(
+                                color: badgeColor,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ),
+      ],
     );
 
     return DefaultTabController(
@@ -598,8 +663,6 @@ class _ClassificationScreenState extends State<ClassificationScreen> {
     );
   }
 }
-
-
 
 class _ClassificationChoiceChip extends StatelessWidget {
   const _ClassificationChoiceChip({
