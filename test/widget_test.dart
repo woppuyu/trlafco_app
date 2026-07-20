@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:trlafco_app/features/auth/login_screen.dart';
 import 'package:trlafco_app/features/logistics/classification/classification_screen.dart';
 import 'package:trlafco_app/features/logistics/deliveries/deliveries_screen.dart';
+import 'package:trlafco_app/features/manager/records/manager_records_screen.dart';
 import 'package:trlafco_app/features/shared/widgets/delivery_form_sheet.dart';
 import 'package:trlafco_app/features/shared/widgets/farmer_form_sheet.dart';
 import 'package:trlafco_app/models/delivery.dart';
@@ -188,10 +189,15 @@ class MockFirebaseService implements FirebaseService {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-AppState _makeState({List<FarmerSupplier>? farmers, List<Delivery>? deliveries}) {
+AppState _makeState({
+  List<FarmerSupplier>? farmers,
+  List<Delivery>? deliveries,
+  List<Payment>? payments,
+}) {
   final mockFb = MockFirebaseService();
   if (farmers != null) mockFb._farmers.addAll(farmers);
   if (deliveries != null) mockFb._deliveries.addAll(deliveries);
+  if (payments != null) mockFb._payments.addAll(payments);
   final state = AppState(
     storage: LocalStorageService(),
     firebase: mockFb,
@@ -363,6 +369,34 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Volume cannot exceed 9999 L'), findsOneWidget);
+  });
+
+  testWidgets('Delivery form excludes inactive farmers from dropdown',
+      (tester) async {
+    final activeFarmer = _testFarmer(id: 'FS-A1', name: 'Active Farmer');
+    final inactiveFarmer = FarmerSupplier(
+      id: 'FS-I1',
+      name: 'Inactive Farmer',
+      barangay: 'Test Barangay',
+      contactNumber: '09170000001',
+      status: 'inactive',
+    );
+    final appState = _makeState(farmers: [activeFarmer, inactiveFarmer]);
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: appState,
+        child: MaterialApp(
+          home: Scaffold(body: DeliveryFormSheet(appState: appState)),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('delivery_farmer_dropdown')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Active Farmer').last, findsOneWidget);
+    expect(find.text('Inactive Farmer'), findsNothing);
   });
 
   // ── Farmer form ──────────────────────────────────────────────────────────
@@ -701,5 +735,200 @@ void main() {
     expect(find.text('Class A'), findsOneWidget);
     expect(find.text('Class B'), findsOneWidget);
     expect(find.text('Rejected'), findsOneWidget);
+  });
+
+  testWidgets('Payments tab search filters records by farmer name',
+      (tester) async {
+    final farmer1 = _testFarmer(id: 'FS-1', name: 'John Doe');
+    final farmer2 = _testFarmer(id: 'FS-2', name: 'Jane Smith');
+    final payment1 = Payment(
+      id: 'PAY-1',
+      farmerSupplierId: 'FS-1',
+      periodLabel: 'Jul 1–15, 2026',
+      periodStart: DateTime(2026, 7, 1),
+      totalVolumeLiters: 100,
+      totalAmount: 4500,
+      status: 'pending',
+    );
+    final payment2 = Payment(
+      id: 'PAY-2',
+      farmerSupplierId: 'FS-2',
+      periodLabel: 'Jul 1–15, 2026',
+      periodStart: DateTime(2026, 7, 1),
+      totalVolumeLiters: 200,
+      totalAmount: 9000,
+      status: 'paid',
+    );
+    final state = _makeState(
+      farmers: [farmer1, farmer2],
+      payments: [payment1, payment2],
+    );
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: state,
+        child: const MaterialApp(
+          home: Scaffold(
+            body: ManagerRecordsScreen(initialIndex: 2),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('John Doe'), findsOneWidget);
+    expect(find.text('Jane Smith'), findsOneWidget);
+
+    await tester.enterText(find.byKey(const Key('payments_search_field')), 'john');
+    await tester.pumpAndSettle();
+
+    expect(find.text('John Doe'), findsOneWidget);
+    expect(find.text('Jane Smith'), findsNothing);
+
+    await tester.tap(find.byIcon(Icons.clear_rounded));
+    await tester.pumpAndSettle();
+
+    expect(find.text('John Doe'), findsOneWidget);
+    expect(find.text('Jane Smith'), findsOneWidget);
+  });
+
+  testWidgets('Classification screen history search filters by farmer name',
+      (tester) async {
+    final farmer1 = _testFarmer(id: 'FS-1', name: 'John Doe');
+    final farmer2 = _testFarmer(id: 'FS-2', name: 'Jane Smith');
+    final delivery1 = Delivery(
+      id: 'DL-1',
+      farmerSupplierId: 'FS-1',
+      date: DateTime.now(),
+      volumeLiters: 100,
+      classification: 'Class A',
+      status: 'classified',
+    );
+    final delivery2 = Delivery(
+      id: 'DL-2',
+      farmerSupplierId: 'FS-2',
+      date: DateTime.now(),
+      volumeLiters: 200,
+      classification: 'Class B',
+      status: 'classified',
+    );
+    final state = _makeState(
+      farmers: [farmer1, farmer2],
+      deliveries: [delivery1, delivery2],
+    );
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: state,
+        child: const MaterialApp(
+          home: ClassificationScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('History'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('John Doe'), findsOneWidget);
+    expect(find.text('Jane Smith'), findsOneWidget);
+
+    await tester.enterText(find.byKey(const Key('history_search_field')), 'john');
+    await tester.pumpAndSettle();
+
+    expect(find.text('John Doe'), findsOneWidget);
+    expect(find.text('Jane Smith'), findsNothing);
+
+    await tester.tap(find.byIcon(Icons.clear_rounded));
+    await tester.pumpAndSettle();
+
+    expect(find.text('John Doe'), findsOneWidget);
+    expect(find.text('Jane Smith'), findsOneWidget);
+  });
+
+  testWidgets('Payments tab sorts pending first, then by latest delivery',
+      (tester) async {
+    final farmer1 = _testFarmer(id: 'FS-1', name: 'John Doe');
+    final farmer2 = _testFarmer(id: 'FS-2', name: 'Jane Smith');
+    final farmer3 = _testFarmer(id: 'FS-3', name: 'Bob Johnson');
+
+    final now = DateTime.now();
+    final d1 = Delivery(
+      id: 'DL-1',
+      farmerSupplierId: 'FS-1',
+      date: now.subtract(const Duration(days: 2)),
+      volumeLiters: 50,
+      classification: 'Class A',
+      status: 'classified',
+    );
+    final d2 = Delivery(
+      id: 'DL-2',
+      farmerSupplierId: 'FS-2',
+      date: now.subtract(const Duration(days: 5)),
+      volumeLiters: 50,
+      classification: 'Class B',
+      status: 'classified',
+    );
+    final d3 = Delivery(
+      id: 'DL-3',
+      farmerSupplierId: 'FS-3',
+      date: now,
+      volumeLiters: 50,
+      classification: 'Class A',
+      status: 'classified',
+    );
+
+    final p1 = Payment(
+      id: 'PAY-1',
+      farmerSupplierId: 'FS-1',
+      periodLabel: 'Jul 1–15, 2026',
+      periodStart: DateTime(2026, 7, 1),
+      totalVolumeLiters: 100,
+      totalAmount: 4500,
+      status: 'pending',
+    );
+    final p2 = Payment(
+      id: 'PAY-2',
+      farmerSupplierId: 'FS-2',
+      periodLabel: 'Jul 1–15, 2026',
+      periodStart: DateTime(2026, 7, 1),
+      totalVolumeLiters: 200,
+      totalAmount: 9000,
+      status: 'pending',
+    );
+    final p3 = Payment(
+      id: 'PAY-3',
+      farmerSupplierId: 'FS-3',
+      periodLabel: 'Jul 1–15, 2026',
+      periodStart: DateTime(2026, 7, 1),
+      totalVolumeLiters: 150,
+      totalAmount: 6750,
+      status: 'paid',
+    );
+
+    final state = _makeState(
+      farmers: [farmer1, farmer2, farmer3],
+      deliveries: [d1, d2, d3],
+      payments: [p1, p2, p3],
+    );
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: state,
+        child: const MaterialApp(
+          home: Scaffold(
+            body: ManagerRecordsScreen(initialIndex: 2),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final finder = find.byType(Card);
+    expect(finder, findsNWidgets(3));
+
+    expect(find.descendant(of: finder.at(0), matching: find.text('John Doe')), findsOneWidget);
+    expect(find.descendant(of: finder.at(1), matching: find.text('Jane Smith')), findsOneWidget);
+    expect(find.descendant(of: finder.at(2), matching: find.text('Bob Johnson')), findsOneWidget);
   });
 }
