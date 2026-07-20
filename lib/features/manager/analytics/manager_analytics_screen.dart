@@ -15,20 +15,20 @@ class ManagerAnalyticsScreen extends StatelessWidget {
         children: [
           // Header
           Text(
-            'Analytics & Forecast',
+            'Analytics & Insights',
             style: Theme.of(context).textTheme.headlineSmall,
           ),
           const SizedBox(height: 4),
           Text(
-            'Supply trends, quality mix, and payout forecast',
+            'Supply trends, quality mix, and payout insights',
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 20),
 
           // Chart
           _SectionBox(
-            title: 'Supply Forecast',
-            subtitle: 'Next 30 days (projected)',
+            title: 'Supply Trend',
+            subtitle: 'Last 30 days',
             child: SizedBox(
               height: 200,
               child: LineChart(
@@ -96,12 +96,19 @@ class ManagerAnalyticsScreen extends StatelessWidget {
                           if (value % 10 != 0) {
                             return const SizedBox.shrink();
                           }
+                          final intVal = value.toInt();
+                          String label;
+                          if (intVal == 30) {
+                            label = 'Today';
+                          } else {
+                            label = '${30 - intVal}d ago';
+                          }
                           return SideTitleWidget(
                             meta: meta,
                             space: 6,
                             fitInside: SideTitleFitInsideData.fromTitleMeta(meta),
                             child: Text(
-                              'Day ${value.toInt()}',
+                              label,
                               style: Theme.of(context).textTheme.labelSmall,
                             ),
                           );

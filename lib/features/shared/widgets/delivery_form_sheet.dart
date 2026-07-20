@@ -128,6 +128,9 @@ class _DeliveryFormSheetState extends State<DeliveryFormSheet> {
                   initialValue: _selectedFarmerId,
                   decoration: const InputDecoration(labelText: 'Farmer-Supplier'),
                   items: widget.appState.farmers
+                      .where((farmer) =>
+                          farmer.status == 'active' ||
+                          farmer.id == _selectedFarmerId)
                       .map(
                         (farmer) => DropdownMenuItem<String>(
                           value: farmer.id,
