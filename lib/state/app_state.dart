@@ -482,7 +482,10 @@ class AppState extends ChangeNotifier {
     }).toList();
 
     final totalVolume = periodDeliveries.fold<double>(0.0, (acc, d) => acc + d.volumeLiters);
-    final totalAmount = totalVolume * 45.0;
+    final totalAmount = periodDeliveries.fold<double>(0.0, (acc, d) {
+      final rate = d.classification == 'Class A' ? 80.0 : 75.0;
+      return acc + (d.volumeLiters * rate);
+    });
 
     final existingIndex = payments.indexWhere((p) =>
         p.farmerSupplierId == farmerId && p.periodLabel == periodLabel);

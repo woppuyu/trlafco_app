@@ -477,7 +477,7 @@ void main() {
     expect(state.payments, hasLength(1));
     final payment = state.payments.first;
     expect(payment.totalVolumeLiters, 100.0);
-    expect(payment.totalAmount, 4500.0);
+    expect(payment.totalAmount, 8000.0);
     expect(payment.status, 'pending');
   });
 
@@ -519,12 +519,12 @@ void main() {
 
     await state.classifyDelivery(deliveryId: 'DL-T1', classification: 'Class A');
     expect(state.payments.first.totalVolumeLiters, 100.0);
-    expect(state.payments.first.totalAmount, 4500.0);
+    expect(state.payments.first.totalAmount, 8000.0);
 
     await state.classifyDelivery(deliveryId: 'DL-T2', classification: 'Class B');
     expect(state.payments, hasLength(1));
     expect(state.payments.first.totalVolumeLiters, 250.0);
-    expect(state.payments.first.totalAmount, 11250.0);
+    expect(state.payments.first.totalAmount, 19250.0);
   });
 
   test('classifyDelivery rolls over to the next period if the current period is already paid', () async {
@@ -571,7 +571,7 @@ void main() {
     final rolledPayment = state.payments.firstWhere((p) => p.id != 'PAY-PAID-1');
     expect(rolledPayment.status, 'pending');
     expect(rolledPayment.totalVolumeLiters, 100.0);
-    expect(rolledPayment.totalAmount, 4500.0);
+    expect(rolledPayment.totalAmount, 8000.0);
 
     final expectedNextStart = isFirstHalf
         ? DateTime(now.year, now.month, 16)

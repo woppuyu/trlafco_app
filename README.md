@@ -39,7 +39,7 @@ The application consolidates all cooperative records into a **single, real-time 
 
 ### Cooperative Manager
 - 🔬 **Quality Classification** — Classify pending deliveries as Class A, Class B, or Rejected.
-- 🏦 **Payments Records** — Monitor and release bi-monthly payouts per farmer (computed at ₱45.00/L).
+- 🏦 **Payments Records** — Monitor and release bi-monthly payouts per farmer (computed at ₱80.00/L for Class A and ₱75.00/L for Class B).
 - 🥛 **Raw Milk Inventory** — Real-time Class A and Class B volume tracking updated on every classification.
 - 📈 **Analytics & Insights** — Visualize raw milk intake trends, farmer volumes, and payout summaries through interactive charts.
 - 👤 **Farmers Directory** — Review all registered cooperative members and their status.

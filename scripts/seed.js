@@ -90,17 +90,20 @@ for (const d of deliveries) {
         farmerSupplierId: d.farmerSupplierId,
         periodLabel: periodLabel,
         periodStart: date,
-        totalVolumeLiters: 0
+        totalVolumeLiters: 0,
+        totalAmount: 0
       };
     }
     paymentPeriods[key].totalVolumeLiters += d.volumeLiters;
+    const rate = d.classification === 'Class A' ? 80.0 : 75.0;
+    paymentPeriods[key].totalAmount += d.volumeLiters * rate;
   }
 }
 
 let paymentCounter = 1;
 for (const key in paymentPeriods) {
   const p = paymentPeriods[key];
-  const totalAmount = p.totalVolumeLiters * 45.0; // 45.0 PHP per Liter rate
+  const totalAmount = p.totalAmount;
   
   // Status: Historical periods (January to June) are paid. July periods are pending.
   const isJuly = p.periodStart.getMonth() === 6; // July index is 6
