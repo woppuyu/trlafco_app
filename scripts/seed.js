@@ -67,26 +67,7 @@ while (currentDate <= endDate) {
   }
   currentDate.setDate(currentDate.getDate() + 1);
 }
-// 3. Products & Inventory definitions
-const products = [
-  { id: 'PR-001', name: 'Fresh Milk 1L', category: 'Dairy', requiresMilk: true, sellingPrice: 95 },
-  { id: 'PR-002', name: 'Chocolate Milk 330ml', category: 'Dairy', requiresMilk: true, sellingPrice: 38 },
-  { id: 'PR-003', name: 'Yogurt Drink', category: 'Dairy', requiresMilk: true, sellingPrice: 45 },
-  { id: 'PR-004', name: 'Kesong Puti', category: 'Dairy', requiresMilk: true, sellingPrice: 120 },
-  { id: 'PR-005', name: 'Eco Tote Bag', category: 'Non-Dairy', requiresMilk: false, sellingPrice: 150 },
-  { id: 'PR-006', name: 'Insulated Bottle', category: 'Non-Dairy', requiresMilk: false, sellingPrice: 220 }
-];
-
-const inventory = [
-  { productId: 'PR-001', currentStock: 140, reservedStock: 20 },
-  { productId: 'PR-002', currentStock: 320, reservedStock: 40 },
-  { productId: 'PR-003', currentStock: 215, reservedStock: 33 },
-  { productId: 'PR-004', currentStock: 88, reservedStock: 11 },
-  { productId: 'PR-005', currentStock: 57, reservedStock: 6 },
-  { productId: 'PR-006', currentStock: 43, reservedStock: 5 }
-];
-
-// 4. Programmatically aggregate payments based on the generated deliveries
+// 3. Programmatically aggregate payments based on the generated deliveries
 const payments = [];
 const paymentPeriods = {};
 
@@ -139,7 +120,7 @@ for (const key in paymentPeriods) {
 
 async function clearDatabase() {
   console.log('Clearing existing collections...');
-  const collections = ['farmers', 'deliveries', 'products', 'inventory', 'payments'];
+  const collections = ['farmers', 'deliveries', 'payments', 'products', 'inventory'];
   for (const collection of collections) {
     const snapshot = await db.collection(collection).get();
     if (snapshot.size > 0) {
@@ -166,14 +147,27 @@ async function seed() {
     await db.collection('deliveries').doc(doc.id).set(doc);
   }
 
-  console.log('Seeding products...');
-  for (const doc of products) {
-    await db.collection('products').doc(doc.id).set(doc);
+  // Calculate raw milk volume from deliveries
+  let classAVolume = 0;
+  let classBVolume = 0;
+  for (const d of deliveries) {
+    if (d.status === 'classified') {
+      if (d.classification === 'Class A') {
+        classAVolume += d.volumeLiters;
+      } else if (d.classification === 'Class B') {
+        classBVolume += d.volumeLiters;
+      }
+    }
   }
 
-  console.log('Seeding inventory...');
-  for (const doc of inventory) {
-    await db.collection('inventory').doc(doc.productId).set(doc);
+  const inventoryItems = [
+    { id: 'class_a', name: 'Class A Raw Milk', volume: parseFloat(classAVolume.toFixed(1)) },
+    { id: 'class_b', name: 'Class B Raw Milk', volume: parseFloat(classBVolume.toFixed(1)) }
+  ];
+
+  console.log('Seeding inventory (raw milk)...');
+  for (const doc of inventoryItems) {
+    await db.collection('inventory').doc(doc.id).set(doc);
   }
 
   console.log(`Seeding ${payments.length} payment records...`);

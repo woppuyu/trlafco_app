@@ -17,8 +17,6 @@ import 'package:trlafco_app/services/local_storage_service.dart';
 import 'package:trlafco_app/services/firebase_service.dart';
 import 'package:trlafco_app/state/app_state.dart';
 import 'package:trlafco_app/models/user_role.dart';
-import 'package:trlafco_app/models/finished_product_inventory.dart';
-import 'package:trlafco_app/models/product.dart';
 
 // ─── Firebase Mocks ────────────────────────────────────────────────────────
 
@@ -46,15 +44,11 @@ class FakedUserCredential implements fb.UserCredential {
 class MockFirebaseService implements FirebaseService {
   final List<FarmerSupplier> _farmers = [];
   final List<Delivery> _deliveries = [];
-  final List<Product> _products = [];
-  final List<FinishedProductInventory> _inventory = [];
   final List<Payment> _payments = [];
 
   late final StreamController<fb.User?> _authController;
   late final StreamController<List<FarmerSupplier>> _farmersController;
   late final StreamController<List<Delivery>> _deliveriesController;
-  late final StreamController<List<Product>> _productsController;
-  late final StreamController<List<FinishedProductInventory>> _inventoryController;
   late final StreamController<List<Payment>> _paymentsController;
 
   MockFirebaseService() {
@@ -66,14 +60,6 @@ class MockFirebaseService implements FirebaseService {
     _deliveriesController = StreamController<List<Delivery>>.broadcast(
       sync: true,
       onListen: () => _deliveriesController.add(List.from(_deliveries)),
-    );
-    _productsController = StreamController<List<Product>>.broadcast(
-      sync: true,
-      onListen: () => _productsController.add(List.from(_products)),
-    );
-    _inventoryController = StreamController<List<FinishedProductInventory>>.broadcast(
-      sync: true,
-      onListen: () => _inventoryController.add(List.from(_inventory)),
     );
     _paymentsController = StreamController<List<Payment>>.broadcast(
       sync: true,
@@ -91,10 +77,6 @@ class MockFirebaseService implements FirebaseService {
   Stream<List<FarmerSupplier>> get farmersStream => _farmersController.stream;
   @override
   Stream<List<Delivery>> get deliveriesStream => _deliveriesController.stream;
-  @override
-  Stream<List<Product>> get productsStream => _productsController.stream;
-  @override
-  Stream<List<FinishedProductInventory>> get inventoryStream => _inventoryController.stream;
   @override
   Stream<List<Payment>> get paymentsStream => _paymentsController.stream;
 
@@ -168,27 +150,6 @@ class MockFirebaseService implements FirebaseService {
   }
 
   @override
-  Future<void> saveProduct(Product product) async {
-    final idx = _products.indexWhere((p) => p.id == product.id);
-    if (idx != -1) {
-      _products[idx] = product;
-    } else {
-      _products.add(product);
-    }
-    _productsController.add(List.from(_products));
-  }
-
-  @override
-  Future<void> saveInventoryItem(FinishedProductInventory item) async {
-    final idx = _inventory.indexWhere((i) => i.productId == item.productId);
-    if (idx != -1) {
-      _inventory[idx] = item;
-    } else {
-      _inventory.add(item);
-    }
-    _inventoryController.add(List.from(_inventory));
-  }
-
   @override
   Future<void> savePayment(Payment payment) async {
     final idx = _payments.indexWhere((p) => p.id == payment.id);
@@ -207,23 +168,20 @@ class MockFirebaseService implements FirebaseService {
   }
 
   @override
+  Future<void> saveRawMilkInventoryStock(String docId, String name, double volume) async {}
+
+  @override
   Future<void> seedDatabase({
     required List<FarmerSupplier> farmers,
     required List<Delivery> deliveries,
-    required List<Product> products,
-    required List<FinishedProductInventory> inventory,
     required List<Payment> payments,
   }) async {
     _farmers.addAll(farmers);
     _deliveries.addAll(deliveries);
-    _products.addAll(products);
-    _inventory.addAll(inventory);
     _payments.addAll(payments);
 
     _farmersController.add(List.from(_farmers));
     _deliveriesController.add(List.from(_deliveries));
-    _productsController.add(List.from(_products));
-    _inventoryController.add(List.from(_inventory));
     _paymentsController.add(List.from(_payments));
   }
 }

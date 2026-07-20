@@ -14,16 +14,19 @@ class ManagerRecordsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    int index = initialIndex ?? 0;
+    if (index < 0 || index > 2) index = 0;
+
     return DefaultTabController(
-      key: ValueKey(initialIndex),
+      key: ValueKey(index),
       length: 3,
-      initialIndex: initialIndex ?? 0,
+      initialIndex: index,
       child: const Scaffold(
         appBar: _RecordsAppBar(),
         body: TabBarView(
           children: [
             _FarmerSuppliersTab(),
-            _InventoryTab(),
+            _MilkStockTab(),
             _PaymentsTab(),
           ],
         ),
@@ -60,7 +63,7 @@ class _RecordsAppBar extends StatelessWidget implements PreferredSizeWidget {
         dividerColor: scheme.outlineVariant.withValues(alpha: 0.5),
         tabs: const [
           Tab(text: 'Farmers'),
-          Tab(text: 'Inventory'),
+          Tab(text: 'Milk Stock'),
           Tab(text: 'Payments'),
         ],
       ),
@@ -135,102 +138,7 @@ class _FarmerSuppliersTab extends StatelessWidget {
   }
 }
 
-class _InventoryTab extends StatelessWidget {
-  const _InventoryTab();
 
-  @override
-  Widget build(BuildContext context) {
-    final state = context.watch<AppState>();
-
-    return DefaultTabController(
-      length: 2,
-      child: Column(
-        children: [
-          const TabBar(
-            tabs: [
-              Tab(text: 'Raw Milk'),
-              Tab(text: 'Finished Product'),
-            ],
-          ),
-          Expanded(
-            child: TabBarView(
-              children: [
-                ListView(
-                  padding: const EdgeInsets.all(12),
-                  children: [
-                    Card(
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                          child: Icon(Icons.warehouse_rounded, color: Theme.of(context).colorScheme.primary),
-                        ),
-                        title: Text(
-                          '${state.totalRawMilkStock.toStringAsFixed(0)} L',
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                        ),
-                        subtitle: const Text('Total Raw Milk Stock'),
-                      ),
-                    ),
-                    Card(
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: const Color(0xFF16A34A).withValues(alpha: 0.1),
-                          child: const Icon(Icons.verified_rounded, color: Color(0xFF16A34A)),
-                        ),
-                        title: Text(
-                          '${state.classARawMilkStock.toStringAsFixed(0)} L',
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                        ),
-                        subtitle: const Text('Class A Milk Total'),
-                      ),
-                    ),
-                    Card(
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: Colors.orange.withValues(alpha: 0.1),
-                          child: const Icon(Icons.pending_actions_rounded, color: Colors.orange),
-                        ),
-                        title: Text(
-                          '${state.classBRawMilkStock.toStringAsFixed(0)} L',
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                        ),
-                        subtitle: const Text('Class B Milk Total'),
-                      ),
-                    ),
-                  ],
-                ),
-                ListView.builder(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: state.inventory.length,
-                  itemBuilder: (context, index) {
-                    final inv = state.inventory[index];
-                    final product = state.products
-                        .firstWhere((p) => p.id == inv.productId);
-                    return Card(
-                      child: ListTile(
-                        title: Text(product.name),
-                        subtitle: Text(
-                          'Stock: ${inv.currentStock} • Reserved: ${inv.reservedStock}',
-                        ),
-                        trailing: Text('PHP ${product.sellingPrice.toStringAsFixed(0)}'),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _PaymentsTab extends StatelessWidget {
   const _PaymentsTab();
@@ -793,6 +701,69 @@ class FarmerSupplierDetailScreen extends StatelessWidget {
                 );
               },
             ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MilkStockTab extends StatelessWidget {
+  const _MilkStockTab();
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+
+    return RefreshIndicator(
+      onRefresh: state.refreshData,
+      child: ListView(
+        padding: const EdgeInsets.all(12),
+        children: [
+          Card(
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                child: Icon(Icons.warehouse_rounded, color: Theme.of(context).colorScheme.primary),
+              ),
+              title: Text(
+                '${state.totalRawMilkStock.toStringAsFixed(0)} L',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              subtitle: const Text('Total Raw Milk Stock'),
+            ),
+          ),
+          Card(
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor: const Color(0xFF16A34A).withValues(alpha: 0.1),
+                child: const Icon(Icons.verified_rounded, color: Color(0xFF16A34A)),
+              ),
+              title: Text(
+                '${state.classARawMilkStock.toStringAsFixed(0)} L',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              subtitle: const Text('Class A Milk Total'),
+            ),
+          ),
+          Card(
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor: Colors.orange.withValues(alpha: 0.1),
+                child: const Icon(Icons.pending_actions_rounded, color: Colors.orange),
+              ),
+              title: Text(
+                '${state.classBRawMilkStock.toStringAsFixed(0)} L',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              subtitle: const Text('Class B Milk Total'),
+            ),
+          ),
         ],
       ),
     );

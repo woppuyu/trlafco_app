@@ -1,8 +1,6 @@
 import 'package:trlafco_app/models/delivery.dart';
 import 'package:trlafco_app/models/farmer_supplier.dart';
-import 'package:trlafco_app/models/finished_product_inventory.dart';
 import 'package:trlafco_app/models/payment.dart';
-import 'package:trlafco_app/models/product.dart';
 
 class SeedData {
   static List<FarmerSupplier> farmers() {
@@ -69,19 +67,20 @@ class SeedData {
   static List<Delivery> deliveries() {
     final now = DateTime.now();
     return [
-      Delivery(id: 'DL-1784073653470001', farmerSupplierId: 'FS-1784421928720001', date: now.subtract(const Duration(days: 0)), volumeLiters: 240, classification: 'Class A', status: 'classified'),
-      Delivery(id: 'DL-1784073653470002', farmerSupplierId: 'FS-1784421928720002', date: now.subtract(const Duration(days: 0)), volumeLiters: 190, classification: null, status: 'pending'),
-      Delivery(id: 'DL-1784073653470003', farmerSupplierId: 'FS-1784421928720004', date: now.subtract(const Duration(days: 1)), volumeLiters: 215, classification: 'Class B', status: 'classified'),
-      Delivery(id: 'DL-1784073653470004', farmerSupplierId: 'FS-1784421928720006', date: now.subtract(const Duration(days: 1)), volumeLiters: 180, classification: 'Rejected', status: 'classified'),
-      Delivery(id: 'DL-1784073653470005', farmerSupplierId: 'FS-1784421928720007', date: now.subtract(const Duration(days: 2)), volumeLiters: 260, classification: 'Class A', status: 'classified'),
-      Delivery(id: 'DL-1784073653470006', farmerSupplierId: 'FS-1784421928720005', date: now.subtract(const Duration(days: 2)), volumeLiters: 205, classification: null, status: 'pending'),
-      Delivery(id: 'DL-1784073653470007', farmerSupplierId: 'FS-1784421928720008', date: now.subtract(const Duration(days: 3)), volumeLiters: 172, classification: 'Class B', status: 'classified'),
-      Delivery(id: 'DL-1784073653470008', farmerSupplierId: 'FS-1784421928720001', date: now.subtract(const Duration(days: 3)), volumeLiters: 229, classification: 'Class A', status: 'classified'),
-      Delivery(id: 'DL-1784073653470009', farmerSupplierId: 'FS-1784421928720004', date: now.subtract(const Duration(days: 4)), volumeLiters: 199, classification: null, status: 'pending'),
-      Delivery(id: 'DL-1784073653470010', farmerSupplierId: 'FS-1784421928720002', date: now.subtract(const Duration(days: 4)), volumeLiters: 188, classification: 'Class B', status: 'classified'),
-      Delivery(id: 'DL-1784073653470011', farmerSupplierId: 'FS-1784421928720007', date: now.subtract(const Duration(days: 5)), volumeLiters: 250, classification: 'Class A', status: 'classified'),
-      Delivery(id: 'DL-1784073653470012', farmerSupplierId: 'FS-1784421928720006', date: now.subtract(const Duration(days: 5)), volumeLiters: 166, classification: null, status: 'pending'),
-      Delivery(id: 'DL-1784073653470013', farmerSupplierId: 'FS-1784421928720005', date: now.subtract(const Duration(days: 6)), volumeLiters: 221, classification: 'Class B', status: 'classified'),
+      // Recent deliveries (within the last 10 days)
+      Delivery(id: 'DL-1784073653470001', farmerSupplierId: 'FS-1784421928720001', date: now.subtract(const Duration(hours: 3)), volumeLiters: 125, classification: null, status: 'pending'),
+      Delivery(id: 'DL-1784073653470002', farmerSupplierId: 'FS-1784421928720002', date: now.subtract(const Duration(hours: 5)), volumeLiters: 80, classification: null, status: 'pending'),
+      Delivery(id: 'DL-1784073653470003', farmerSupplierId: 'FS-1784421928720004', date: now.subtract(const Duration(days: 1)), volumeLiters: 195, classification: 'Class A', status: 'classified'),
+      Delivery(id: 'DL-1784073653470004', farmerSupplierId: 'FS-1784421928720001', date: now.subtract(const Duration(days: 1)), volumeLiters: 220, classification: 'Class A', status: 'classified'),
+      Delivery(id: 'DL-1784073653470005', farmerSupplierId: 'FS-1784421928720008', date: now.subtract(const Duration(days: 2)), volumeLiters: 145, classification: 'Class B', status: 'classified'),
+      Delivery(id: 'DL-1784073653470006', farmerSupplierId: 'FS-1784421928720002', date: now.subtract(const Duration(days: 2)), volumeLiters: 98, classification: 'Class A', status: 'classified'),
+      Delivery(id: 'DL-1784073653470007', farmerSupplierId: 'FS-1784421928720004', date: now.subtract(const Duration(days: 3)), volumeLiters: 210, classification: 'Class B', status: 'classified'),
+      Delivery(id: 'DL-1784073653470008', farmerSupplierId: 'FS-1784421928720003', date: now.subtract(const Duration(days: 3)), volumeLiters: 180, classification: null, status: 'pending'),
+      Delivery(id: 'DL-1784073653470009', farmerSupplierId: 'FS-1784421928720001', date: now.subtract(const Duration(days: 4)), volumeLiters: 165, classification: 'Class A', status: 'classified'),
+      Delivery(id: 'DL-1784073653470010', farmerSupplierId: 'FS-1784421928720002', date: now.subtract(const Duration(days: 4)), volumeLiters: 110, classification: 'Class A', status: 'classified'),
+      Delivery(id: 'DL-1784073653470011', farmerSupplierId: 'FS-1784421928720004', date: now.subtract(const Duration(days: 5)), volumeLiters: 185, classification: 'Class A', status: 'classified'),
+      Delivery(id: 'DL-1784073653470012', farmerSupplierId: 'FS-1784421928720001', date: now.subtract(const Duration(days: 5)), volumeLiters: 190, classification: 'Class B', status: 'classified'),
+      Delivery(id: 'DL-1784073653470013', farmerSupplierId: 'FS-1784421928720002', date: now.subtract(const Duration(days: 6)), volumeLiters: 120, classification: 'Class A', status: 'classified'),
       Delivery(id: 'DL-1784073653470014', farmerSupplierId: 'FS-1784421928720008', date: now.subtract(const Duration(days: 6)), volumeLiters: 210, classification: 'Class A', status: 'classified'),
       Delivery(id: 'DL-1784073653470015', farmerSupplierId: 'FS-1784421928720003', date: now.subtract(const Duration(days: 7)), volumeLiters: 134, classification: 'Rejected', status: 'classified'),
       Delivery(id: 'DL-1784073653470016', farmerSupplierId: 'FS-1784421928720002', date: now.subtract(const Duration(days: 8)), volumeLiters: 175, classification: null, status: 'pending'),
@@ -90,34 +89,11 @@ class SeedData {
     ];
   }
 
-  static List<Product> products() {
-    return [
-      Product(id: 'PR-001', name: 'Fresh Milk 1L', category: 'Dairy', requiresMilk: true, sellingPrice: 95),
-      Product(id: 'PR-002', name: 'Chocolate Milk 330ml', category: 'Dairy', requiresMilk: true, sellingPrice: 38),
-      Product(id: 'PR-003', name: 'Yogurt Drink', category: 'Dairy', requiresMilk: true, sellingPrice: 45),
-      Product(id: 'PR-004', name: 'Kesong Puti', category: 'Dairy', requiresMilk: true, sellingPrice: 120),
-      Product(id: 'PR-005', name: 'Eco Tote Bag', category: 'Non-Dairy', requiresMilk: false, sellingPrice: 150),
-      Product(id: 'PR-006', name: 'Insulated Bottle', category: 'Non-Dairy', requiresMilk: false, sellingPrice: 220),
-    ];
-  }
-
-  static List<FinishedProductInventory> inventory() {
-    return [
-      FinishedProductInventory(productId: 'PR-001', currentStock: 140, reservedStock: 20),
-      FinishedProductInventory(productId: 'PR-002', currentStock: 320, reservedStock: 40),
-      FinishedProductInventory(productId: 'PR-003', currentStock: 215, reservedStock: 33),
-      FinishedProductInventory(productId: 'PR-004', currentStock: 88, reservedStock: 11),
-      FinishedProductInventory(productId: 'PR-005', currentStock: 57, reservedStock: 6),
-      FinishedProductInventory(productId: 'PR-006', currentStock: 43, reservedStock: 5),
-    ];
-  }
-
   static List<Payment> payments() {
     return [
       // July 2026 — current period (pending)
       Payment(id: 'PAY-1784073653470007', farmerSupplierId: 'FS-1784421928720001', periodLabel: 'Jul 1–15, 2026', periodStart: DateTime(2026, 7, 1), totalVolumeLiters: 713, totalAmount: 32085, status: 'pending'),
       Payment(id: 'PAY-1784073653470008', farmerSupplierId: 'FS-1784421928720002', periodLabel: 'Jul 1–15, 2026', periodStart: DateTime(2026, 7, 1), totalVolumeLiters: 553, totalAmount: 24885, status: 'pending'),
-      Payment(id: 'PAY-1784073653470009', farmerSupplierId: 'FS-1784421928720004', periodLabel: 'Jul 1–15, 2026', periodStart: DateTime(2026, 7, 1), totalVolumeLiters: 622, totalAmount: 27990, status: 'pending'),
       Payment(id: 'PAY-1784073653470010', farmerSupplierId: 'FS-1784421928720007', periodLabel: 'Jul 1–15, 2026', periodStart: DateTime(2026, 7, 1), totalVolumeLiters: 510, totalAmount: 22950, status: 'paid'),
       // May 2026 — historical records
       Payment(id: 'PAY-1784073653470001', farmerSupplierId: 'FS-1784421928720001', periodLabel: 'May 1–15, 2026', periodStart: DateTime(2026, 5, 1), totalVolumeLiters: 1330, totalAmount: 59850, status: 'paid'),

@@ -3,9 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:trlafco_app/models/delivery.dart';
 import 'package:trlafco_app/models/farmer_supplier.dart';
-import 'package:trlafco_app/models/finished_product_inventory.dart';
 import 'package:trlafco_app/models/payment.dart';
-import 'package:trlafco_app/models/product.dart';
 
 class FirebaseService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -135,34 +133,6 @@ class FirebaseService {
     });
   }
 
-  Stream<List<Product>> get productsStream {
-    return _firestore.collection('products').snapshots().map((snapshot) {
-      final list = <Product>[];
-      for (final doc in snapshot.docs) {
-        try {
-          list.add(Product.fromJson(doc.data()));
-        } catch (e) {
-          debugPrint('Error parsing product document ${doc.id}: $e');
-        }
-      }
-      return list;
-    });
-  }
-
-  Stream<List<FinishedProductInventory>> get inventoryStream {
-    return _firestore.collection('inventory').snapshots().map((snapshot) {
-      final list = <FinishedProductInventory>[];
-      for (final doc in snapshot.docs) {
-        try {
-          list.add(FinishedProductInventory.fromJson(doc.data()));
-        } catch (e) {
-          debugPrint('Error parsing inventory document ${doc.id}: $e');
-        }
-      }
-      return list;
-    });
-  }
-
   Stream<List<Payment>> get paymentsStream {
     return _firestore.collection('payments').snapshots().map((snapshot) {
       final list = <Payment>[];
@@ -196,15 +166,6 @@ class FirebaseService {
     await _firestore.collection('deliveries').doc(id).delete();
   }
 
-  // Product CRUD
-  Future<void> saveProduct(Product product) async {
-    await _firestore.collection('products').doc(product.id).set(product.toJson());
-  }
-  // Inventory CRUD
-  Future<void> saveInventoryItem(FinishedProductInventory item) async {
-    await _firestore.collection('inventory').doc(item.productId).set(item.toJson());
-  }
-
   // Payment CRUD
   Future<void> savePayment(Payment payment) async {
     await _firestore.collection('payments').doc(payment.id).set(payment.toJson());
@@ -214,12 +175,18 @@ class FirebaseService {
     await _firestore.collection('payments').doc(id).delete();
   }
 
+  Future<void> saveRawMilkInventoryStock(String docId, String name, double volume) async {
+    await _firestore.collection('inventory').doc(docId).set({
+      'id': docId,
+      'name': name,
+      'volume': volume,
+    });
+  }
+
   // Batch seeding helper
   Future<void> seedDatabase({
     required List<FarmerSupplier> farmers,
     required List<Delivery> deliveries,
-    required List<Product> products,
-    required List<FinishedProductInventory> inventory,
     required List<Payment> payments,
   }) async {
     final batch = _firestore.batch();
@@ -229,12 +196,6 @@ class FirebaseService {
     }
     for (final d in deliveries) {
       batch.set(_firestore.collection('deliveries').doc(d.id), d.toJson());
-    }
-    for (final p in products) {
-      batch.set(_firestore.collection('products').doc(p.id), p.toJson());
-    }
-    for (final i in inventory) {
-      batch.set(_firestore.collection('inventory').doc(i.productId), i.toJson());
     }
     for (final pm in payments) {
       batch.set(_firestore.collection('payments').doc(pm.id), pm.toJson());

@@ -3,9 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/material.dart';
 import 'package:trlafco_app/models/delivery.dart';
 import 'package:trlafco_app/models/farmer_supplier.dart';
-import 'package:trlafco_app/models/finished_product_inventory.dart';
 import 'package:trlafco_app/models/payment.dart';
-import 'package:trlafco_app/models/product.dart';
 import 'package:trlafco_app/models/user_role.dart';
 import 'package:trlafco_app/services/local_storage_service.dart';
 import 'package:trlafco_app/services/firebase_service.dart';
@@ -29,8 +27,6 @@ class AppState extends ChangeNotifier {
 
   List<FarmerSupplier> farmers = [];
   List<Delivery> deliveries = [];
-  List<Product> products = [];
-  List<FinishedProductInventory> inventory = [];
   List<Payment> payments = [];
 
   final List<StreamSubscription> _subscriptions = [];
@@ -39,16 +35,12 @@ class AppState extends ChangeNotifier {
   // ─── Initial Data Pre-fetching State ──────────────────────────────────────
   bool _farmersLoaded = false;
   bool _deliveriesLoaded = false;
-  bool _productsLoaded = false;
-  bool _inventoryLoaded = false;
   bool _paymentsLoaded = false;
   Completer<void>? _dataCompleter;
 
   bool get hasLoadedInitialData =>
       _farmersLoaded &&
       _deliveriesLoaded &&
-      _productsLoaded &&
-      _inventoryLoaded &&
       _paymentsLoaded;
 
   Future<void> waitForInitialData() {
@@ -60,8 +52,6 @@ class AppState extends ChangeNotifier {
   void _resetInitialDataFlags() {
     _farmersLoaded = false;
     _deliveriesLoaded = false;
-    _productsLoaded = false;
-    _inventoryLoaded = false;
     _paymentsLoaded = false;
     _dataCompleter = null;
   }
@@ -93,24 +83,6 @@ class AppState extends ChangeNotifier {
       firebaseService.deliveriesStream.listen((list) {
         deliveries = list;
         _deliveriesLoaded = true;
-        _checkInitialDataComplete();
-        notifyListeners();
-      }),
-    );
-
-    _streamSubscriptions.add(
-      firebaseService.productsStream.listen((list) {
-        products = list;
-        _productsLoaded = true;
-        _checkInitialDataComplete();
-        notifyListeners();
-      }),
-    );
-
-    _streamSubscriptions.add(
-      firebaseService.inventoryStream.listen((list) {
-        inventory = list;
-        _inventoryLoaded = true;
         _checkInitialDataComplete();
         notifyListeners();
       }),
@@ -164,8 +136,6 @@ class AppState extends ChangeNotifier {
           // Clear data on logout
           farmers = [];
           deliveries = [];
-          products = [];
-          inventory = [];
           payments = [];
           _resetInitialDataFlags();
           for (final sub in _streamSubscriptions) {
@@ -339,6 +309,7 @@ class AppState extends ChangeNotifier {
 
   Future<void> addDelivery(Delivery delivery) async {
     await firebaseService.saveDelivery(delivery);
+    await _syncRawMilkStockToFirestore();
   }
 
   Future<void> updateDelivery(Delivery updated) async {
@@ -363,6 +334,7 @@ class AppState extends ChangeNotifier {
     if (old.farmerSupplierId != resolved.farmerSupplierId || oldPeriodStart != newPeriodStart) {
       await _syncPaymentForFarmerAndPeriod(resolved.farmerSupplierId, newPeriodStart);
     }
+    await _syncRawMilkStockToFirestore();
   }
 
   Future<void> deleteDelivery(String id) async {
@@ -371,6 +343,7 @@ class AppState extends ChangeNotifier {
 
     final oldPeriodStart = old.paymentPeriodStart ?? old.date;
     await _syncPaymentForFarmerAndPeriod(old.farmerSupplierId, oldPeriodStart);
+    await _syncRawMilkStockToFirestore();
   }
 
   Future<void> classifyDelivery({
@@ -397,6 +370,7 @@ class AppState extends ChangeNotifier {
 
     final periodStart = updated.paymentPeriodStart ?? updated.date;
     await _syncPaymentForFarmerAndPeriod(updated.farmerSupplierId, periodStart);
+    await _syncRawMilkStockToFirestore();
   }
 
   // ─── Payment operations ───────────────────────────────────────────────────
@@ -457,9 +431,7 @@ class AppState extends ChangeNotifier {
         .fold(0, (total, e) => total + e.totalAmount);
   }
 
-  int get pendingOrdersCount {
-    return inventory.fold(0, (total, e) => total + e.reservedStock);
-  }
+
 
   int get todayDeliveriesCount {
     final now = DateTime.now();
@@ -471,7 +443,22 @@ class AppState extends ChangeNotifier {
         .length;
   }
 
-  // ─── Private helpers ──────────────────────────────────────────────────────
+  Future<void> _syncRawMilkStockToFirestore() async {
+    final classAVolume = deliveries
+        .where((d) => d.status == 'classified' && d.classification == 'Class A')
+        .fold<double>(0.0, (acc, d) => acc + d.volumeLiters);
+
+    final classBVolume = deliveries
+        .where((d) => d.status == 'classified' && d.classification == 'Class B')
+        .fold<double>(0.0, (acc, d) => acc + d.volumeLiters);
+
+    try {
+      await firebaseService.saveRawMilkInventoryStock('class_a', 'Class A Raw Milk', classAVolume);
+      await firebaseService.saveRawMilkInventoryStock('class_b', 'Class B Raw Milk', classBVolume);
+    } catch (e) {
+      debugPrint('Failed to sync raw milk stock to Firestore: $e');
+    }
+  }
 
   Future<void> _syncPaymentForFarmerAndPeriod(String farmerId, DateTime periodStart) async {
     final isFirstHalf = periodStart.day <= 15;

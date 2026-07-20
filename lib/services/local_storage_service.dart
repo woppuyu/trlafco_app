@@ -3,17 +3,13 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:trlafco_app/models/delivery.dart';
 import 'package:trlafco_app/models/farmer_supplier.dart';
-import 'package:trlafco_app/models/finished_product_inventory.dart';
 import 'package:trlafco_app/models/payment.dart';
-import 'package:trlafco_app/models/product.dart';
 
 /// Handles all local persistence via SharedPreferences.
 class LocalStorageService {
   static const String _themeKey = 'theme_mode';
   static const String _farmersKey = 'farmers';
   static const String _deliveriesKey = 'deliveries';
-  static const String _productsKey = 'products';
-  static const String _inventoryKey = 'inventory';
   static const String _paymentsKey = 'payments';
   static const String _sessionRoleKey = 'session_role';
   static const String _sessionUsernameKey = 'session_username';
@@ -102,14 +98,6 @@ class LocalStorageService {
     return _loadList(_deliveriesKey, Delivery.fromJson);
   }
 
-  Future<List<Product>> loadProducts() async {
-    return _loadList(_productsKey, Product.fromJson);
-  }
-
-  Future<List<FinishedProductInventory>> loadInventory() async {
-    return _loadList(_inventoryKey, FinishedProductInventory.fromJson);
-  }
-
   Future<List<Payment>> loadPayments() async {
     return _loadList(_paymentsKey, Payment.fromJson);
   }
@@ -120,14 +108,6 @@ class LocalStorageService {
 
   Future<void> saveDeliveries(List<Delivery> deliveries) async {
     await _saveList(_deliveriesKey, deliveries.map((e) => e.toJson()).toList());
-  }
-
-  Future<void> saveProducts(List<Product> products) async {
-    await _saveList(_productsKey, products.map((e) => e.toJson()).toList());
-  }
-
-  Future<void> saveInventory(List<FinishedProductInventory> inventory) async {
-    await _saveList(_inventoryKey, inventory.map((e) => e.toJson()).toList());
   }
 
   Future<void> savePayments(List<Payment> payments) async {

@@ -52,12 +52,12 @@ class ManagerDashboardScreen extends StatelessWidget {
                       color: const Color(0xFF06B6D4),
                       subtitle: 'classified volume',
                     ),
-                    StatCard(
-                      title: 'Pending Orders',
-                      value: '${state.pendingOrdersCount}',
-                      icon: Icons.pending_actions_rounded,
+                     StatCard(
+                      title: 'Active Farmers',
+                      value: '${state.farmers.where((f) => f.status == 'active').length}',
+                      icon: Icons.people_alt_rounded,
                       color: const Color(0xFFF59E0B),
-                      subtitle: 'reserved stock',
+                      subtitle: 'supplier profiles',
                     ),
                     StatCard(
                       title: 'Monthly Payout',
